@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import type { ReactNode } from "react";
+import { isLocalMode } from "../lib/server/config";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -15,7 +16,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-  const content = publishableKey ? <ClerkProvider publishableKey={publishableKey}>{children}</ClerkProvider> : children;
+  const content = !isLocalMode() && publishableKey
+    ? <ClerkProvider publishableKey={publishableKey}>{children}</ClerkProvider>
+    : children;
 
   return (
     <html lang="en">
