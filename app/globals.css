@@ -503,6 +503,62 @@
   }
 }
 
+/* The auth surface intentionally follows Clerk's quiet, original composition:
+   one focused form, generous whitespace, and StackBridge context kept small. */
+.auth-page-gate {
+  padding: 40px 24px 48px;
+  background:
+    radial-gradient(circle at 12% 8%, rgba(104, 138, 125, 0.1), transparent 23rem),
+    radial-gradient(circle at 88% 92%, rgba(181, 154, 98, 0.09), transparent 26rem),
+    var(--paper);
+}
+
+.auth-minimal {
+  width: min(100%, 430px);
+  margin: auto;
+}
+
+.auth-minimal h2 {
+  margin: 25px 0 10px;
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: clamp(44px, 7vw, 58px);
+  font-weight: 500;
+  letter-spacing: -0.08em;
+  line-height: 0.98;
+}
+
+.auth-minimal .auth-form-description {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.auth-minimal .clerk-auth-provider {
+  width: 100%;
+  max-width: none;
+  margin-top: 29px;
+}
+
+.auth-minimal .auth-switch {
+  margin-top: 24px;
+}
+
+.auth-minimal .auth-trust {
+  margin-top: 28px;
+}
+
+@media (max-width: 520px) {
+  .auth-page-gate {
+    padding: 30px 20px 38px;
+  }
+
+  .auth-minimal h2 {
+    font-size: clamp(42px, 12vw, 54px);
+  }
+}
+
 .access-card-top {
   display: flex;
   align-items: flex-start;
