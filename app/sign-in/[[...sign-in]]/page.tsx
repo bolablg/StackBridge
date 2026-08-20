@@ -1,9 +1,5 @@
-import { SignIn } from "@clerk/nextjs";
+import ClerkAuthPanel from "../../clerk-auth-panel";
 
 export default function SignInPage() {
-  return (
-    <div style={{ display: "flex", minHeight: "100vh", alignItems: "center", justifyContent: "center" }}>
-      <SignIn />
-    </div>
-  );
+  return <ClerkAuthPanel mode="sign-in" routing="path" />;
 }

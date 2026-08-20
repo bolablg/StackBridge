@@ -43,6 +43,109 @@
   width: 100%;
 }
 
+.auth-page-gate {
+  overflow-y: auto;
+}
+
+.auth-card-clerk {
+  width: min(100%, 460px);
+}
+
+.clerk-auth-provider {
+  margin-top: 16px;
+}
+
+.clerk-auth-root,
+.clerk-auth-component-card {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+.clerk-auth-component-card {
+  padding: 0 !important;
+  color: var(--ink) !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.clerk-auth-hide {
+  display: none !important;
+}
+
+.clerk-auth-label {
+  color: var(--muted) !important;
+  font-family: "Courier New", "SFMono-Regular", monospace !important;
+  font-size: 10px !important;
+  letter-spacing: 0.03em !important;
+  text-transform: uppercase !important;
+}
+
+.clerk-auth-input {
+  min-height: 43px !important;
+  color: var(--ink) !important;
+  background: var(--input) !important;
+  border: 1px solid var(--line-strong) !important;
+  box-shadow: none !important;
+}
+
+.clerk-auth-input:focus {
+  border-color: var(--teal) !important;
+  box-shadow: 0 0 0 3px rgba(104, 138, 125, 0.16) !important;
+}
+
+.clerk-auth-primary {
+  min-height: 43px !important;
+  color: #fffaf3 !important;
+  background: var(--ember) !important;
+  border: 1px solid var(--ember) !important;
+  box-shadow: 0 8px 16px rgba(152, 86, 77, 0.18) !important;
+}
+
+.clerk-auth-primary:hover {
+  background: var(--ember-deep) !important;
+  border-color: var(--ember-deep) !important;
+}
+
+.clerk-auth-social {
+  min-height: 43px !important;
+  color: var(--ink-soft) !important;
+  background: transparent !important;
+  border: 1px solid var(--line-strong) !important;
+  box-shadow: none !important;
+}
+
+.clerk-auth-social:hover {
+  background: var(--paper-deep) !important;
+  border-color: var(--teal) !important;
+}
+
+.clerk-auth-social-text {
+  color: inherit !important;
+}
+
+.clerk-auth-divider {
+  background: var(--line-strong) !important;
+}
+
+.clerk-auth-divider-text {
+  color: var(--muted) !important;
+  background: var(--paper) !important;
+  font-family: "Courier New", "SFMono-Regular", monospace !important;
+  font-size: 9px !important;
+  text-transform: uppercase;
+}
+
+.clerk-auth-footer {
+  padding-top: 16px !important;
+  border-top: 1px solid var(--line) !important;
+}
+
+.clerk-auth-link {
+  color: var(--ember-deep) !important;
+}
+
 .access-card-top {
   display: flex;
   align-items: flex-start;

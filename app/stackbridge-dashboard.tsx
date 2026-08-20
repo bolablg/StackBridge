@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, CSSProperties, FormEvent, ReactNode } from "react";
+import Link from "next/link";
 import {
   DOMAIN_META,
   QUESTIONS,
@@ -11,8 +12,9 @@ import {
   WEEKS,
   type WeekStatus,
 } from "../lib/content";
-import { Show, SignInButton, SignUpButton, UserButton, useAuth, useUser } from "@clerk/nextjs";
+import { Show, UserButton, useAuth, useUser } from "@clerk/nextjs";
 import AccessGate from "./access-gate";
+import ClerkAuthPanel from "./clerk-auth-panel";
 
 const LEGACY_STORAGE_KEY = "aws-dea-dashboard-v1";
 const PATH_KEY = "gcp-to-aws-data-engineer";
@@ -171,12 +173,8 @@ function ClerkHeaderActions({ isAdmin }: { isAdmin: boolean }) {
     <div className="clerk-header-actions">
       {isAdmin && <a className="text-button text-button-main" href="/admin/access-requests">Access requests</a>}
       <Show when="signed-out">
-        <SignInButton mode="modal">
-          <button className="text-button text-button-main" type="button">Sign in</button>
-        </SignInButton>
-        <SignUpButton mode="modal">
-          <button className="button button-small button-dark" type="button">Create account</button>
-        </SignUpButton>
+        <Link className="text-button text-button-main" href="/sign-in">Sign in</Link>
+        <Link className="button button-small button-dark" href="/sign-up">Create account</Link>
       </Show>
       <Show when="signed-in">
         <UserButton appearance={{ elements: { avatarBox: "clerk-avatar" } }} />
@@ -186,25 +184,7 @@ function ClerkHeaderActions({ isAdmin }: { isAdmin: boolean }) {
 }
 
 function ClerkAuthGate() {
-  return (
-    <div className="auth-gate">
-      <div className="auth-card" role="dialog" aria-modal="true" aria-labelledby="auth-title">
-        <div className="brand-mark auth-mark" aria-hidden="true">SB</div>
-        <div className="eyebrow"><span className="eyebrow-line" /> private study path</div>
-        <h2 id="auth-title">Welcome to StackBridge.</h2>
-        <p>Sign in to keep your own learning path, evidence, and progress separate from every other learner.</p>
-        <div className="auth-actions">
-          <SignInButton mode="modal">
-            <button className="button button-primary button-full" type="button">Sign in <span aria-hidden="true">→</span></button>
-          </SignInButton>
-          <SignUpButton mode="modal">
-            <button className="button button-quiet button-full" type="button">Create account</button>
-          </SignUpButton>
-        </div>
-        <p className="auth-message">Your Clerk account unlocks your private StackBridge path.</p>
-      </div>
-    </div>
-  );
+  return <ClerkAuthPanel mode="sign-in" routing="hash" />;
 }
 
 function ClerkDashboard({ isAdmin }: { isAdmin: boolean }) {
