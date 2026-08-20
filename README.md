@@ -14,6 +14,7 @@ The product is built to grow into paths such as AWS → Azure, Snowflake → Dat
 - Browser-local persistence for immediate use, with per-user hosted sync when Clerk and Neon are configured.
 - Installable PWA shell with offline app loading, network awareness, and a dim theme.
 - Multi-user, multi-path storage through Clerk and Neon Postgres.
+- Server-side access control with an admin approval queue for new accounts.
 
 ## Local development
 
@@ -55,8 +56,16 @@ Set these environment variables in Vercel for Preview and Production:
 - `CLERK_JWT_KEY` — optional, only when using Clerk’s JWT verification path.
 - `CLERK_AUTHORIZED_PARTIES` — comma-separated deployed origins when you need an explicit allow-list.
 - `CLERK_FRONTEND_API_URL` — optional; normally derived from the publishable key.
+- `STACKBRIDGE_ADMIN_EMAIL` — the Clerk email that owns the access queue; defaults to `bolajibalogoun@gmail.com`.
+- `RESEND_API_KEY` and `ACCESS_REQUEST_FROM_EMAIL` — optional; enable email notifications for new access requests.
 
 The first authenticated request creates or upgrades the application tables and seeds the default `gcp-to-aws-data-engineer` path. `schema.sql` contains the same DDL if you prefer to apply it manually. Each user’s progress is isolated by `(user_id, path_key)`.
+
+### Access control
+
+The configured admin email is admitted automatically. Every other signed-in account is held at the access gate until approved. The gate can create one pending request per learner and stores the request in Neon. The admin reviews the queue at `/admin/access-requests`; approving a request creates a path-scoped grant. The dashboard page and all progress/path APIs enforce the same decision on the server and return `403` for unapproved accounts.
+
+Email delivery is optional so the free deployment remains usable without another paid service. Without the two Resend variables, requests still appear in the admin queue. To send email notifications, create a free Resend account, add a verified sender address, and set `RESEND_API_KEY` plus `ACCESS_REQUEST_FROM_EMAIL` in Vercel.
 
 After deploying:
 
@@ -72,6 +81,13 @@ The PWA shell can reopen without a network. Database synchronization requires co
 - `dev-bola` — active development and feature work.
 - `staging` — pre-production validation and deployment previews.
 - `main` — production deployment branch.
+
+### CI/CD promotion flow
+
+- Every push to `dev-bola` runs the GitHub Actions `quality` check (`npm ci`, lint, and build) and creates a Vercel preview.
+- A pull request from `dev-bola` into `staging` runs the same quality check and receives a Vercel pull-request preview. Merging it updates the staging branch deployment.
+- A pull request from `staging` into `main` must pass both `quality` and the Vercel check. Merging it is the only production release path because `main` is protected.
+- `staging` and `main` reject direct pushes, force pushes, and unresolved review conversations. They currently require a pull request and passing checks; review approval can be increased later if the project gains additional maintainers.
 
 ## Legacy local fallback
 

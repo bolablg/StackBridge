@@ -54,6 +54,40 @@ CREATE TABLE IF NOT EXISTS path_progress (
     ON DELETE CASCADE
 );
 
+-- Access is granted per learning path. The admin email is an application-level
+-- owner identity; everyone else must have a row in access_grants.
+CREATE TABLE IF NOT EXISTS access_grants (
+  path_key TEXT NOT NULL REFERENCES learning_paths(path_key) ON DELETE CASCADE,
+  clerk_user_id TEXT NOT NULL,
+  email TEXT NOT NULL,
+  granted_by TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (path_key, clerk_user_id)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS access_grants_email_idx
+ON access_grants (path_key, LOWER(email));
+
+CREATE TABLE IF NOT EXISTS access_requests (
+  id TEXT PRIMARY KEY,
+  path_key TEXT NOT NULL REFERENCES learning_paths(path_key) ON DELETE CASCADE,
+  clerk_user_id TEXT NOT NULL,
+  email TEXT NOT NULL,
+  display_name TEXT NOT NULL,
+  message TEXT,
+  status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'approved', 'denied')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  reviewed_at TIMESTAMPTZ,
+  reviewed_by TEXT
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS access_requests_pending_idx
+ON access_requests (path_key, clerk_user_id)
+WHERE status = 'pending';
+
 INSERT INTO learning_paths (
   path_key, title, source_platform, target_platform, focus, definition
 )
