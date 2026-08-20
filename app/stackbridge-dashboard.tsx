@@ -5,6 +5,7 @@ import type { ChangeEvent, CSSProperties, FormEvent, ReactNode } from "react";
 import Link from "next/link";
 import {
   DOMAIN_META,
+  PATH_CATALOG,
   QUESTIONS,
   STATUS_LABELS,
   STATUS_OPTIONS,
@@ -506,7 +507,7 @@ function DashboardCore({ auth, isAdmin }: { auth: AuthState; isAdmin: boolean })
             <div className="brand-mark" aria-hidden="true">SB</div>
             <div>
               <div className="brand-title">STACKBRIDGE</div>
-              <div className="brand-subtitle">cross-platform / 01</div>
+              <div className="brand-subtitle">path library / 01 live</div>
             </div>
           </div>
           <div className="sidebar-stamp" aria-label="Current learning path"><span>GCP</span><span className="stamp-arrow">→</span><span>AWS</span></div>
@@ -536,7 +537,7 @@ function DashboardCore({ auth, isAdmin }: { auth: AuthState; isAdmin: boolean })
 
         <main id="main-content" className="main-content">
           <header className="topbar">
-            <div className="topbar-context"><span className="live-dot" aria-hidden="true" /><span>{view === "overview" ? "StackBridge / GCP → AWS" : view === "roadmap" ? "data engineering / study sequence" : view === "diagnostic" ? "baseline / 16 questions" : view === "checkin" ? "evidence log / weekly" : "reference desk / field notes"}</span></div>
+            <div className="topbar-context"><span className="live-dot" aria-hidden="true" /><span>{view === "overview" ? "StackBridge / path library" : view === "roadmap" ? "data engineering / study sequence" : view === "diagnostic" ? "baseline / 16 questions" : view === "checkin" ? "evidence log / weekly" : "reference desk / field notes"}</span></div>
             <div className="topbar-actions">
               <span className="network-status"><span className="network-dot" /> {online ? "online" : "offline · local save"}</span>
               <span className="save-state">{auth.userId ? auth.displayName : "saved locally"}</span>
@@ -565,23 +566,82 @@ function OverviewView({ state, completion, verifiedCount, nextWeek, setupCount, 
     <section className="view is-visible">
       <div className="hero-grid">
         <div className="hero-copy reveal reveal-one">
-          <div className="eyebrow"><span className="eyebrow-line" /> StackBridge / DEA-C01</div>
-          <h1>Carry your data-engineering judgment <em>across clouds.</em></h1>
-          <p className="hero-lede">A working path for a Google Cloud Professional Data Engineer moving into AWS. Keep the engineering judgment; translate the platform boundaries, operating model, and exam language.</p>
-          <div className="hero-actions"><button className="button button-primary" type="button" onClick={() => onView("roadmap")}>View study sequence <span aria-hidden="true">↗</span></button><button className="button button-quiet" type="button" onClick={() => onView("diagnostic")}>Take baseline</button></div>
+          <div className="eyebrow"><span className="eyebrow-line" /> StackBridge / path library</div>
+          <h1>Carry your data &amp; AI expertise <em>across cloud platforms.</em></h1>
+          <p className="hero-lede">Your role is the constant. Your platform is the bridge. Start from the certification or environment you already know, then translate the services, operating model, and exam language for where you want to go next.</p>
+          <div className="hero-actions"><button className="button button-primary" type="button" onClick={() => document.getElementById("path-library")?.scrollIntoView({ behavior: "smooth", block: "start" })}>Explore transition paths <span aria-hidden="true">↘</span></button><button className="button button-quiet" type="button" onClick={() => onView("diagnostic")}>Take baseline</button></div>
         </div>
         <div className="progress-card reveal reveal-two">
+          <div className="progress-card-label">current live path</div>
+          <div className="progress-card-route"><strong>GCP</strong><span aria-hidden="true">→</span><strong>AWS</strong></div>
           <div className="progress-orbit" id="progress-orbit" style={orbitStyle} aria-label={`${completion}% of weeks verified`}><div className="progress-orbit-inner"><span>completion</span><strong>{completion}%</strong><small>{verifiedCount} / {WEEKS.length} verified</small></div></div>
           <p className="progress-note">{verifiedCount === WEEKS.length ? "Readiness gates are now in view." : `Next: Week ${String(nextWeek.number).padStart(2, "0")} — ${nextWeek.title}.`}</p>
         </div>
       </div>
-      <div className="proof-strip"><div><strong>13</strong><span>milestones</span></div><div><strong>4</strong><span>exam domains</span></div><div><strong>1</strong><span>working path</span></div><div><strong>0</strong><span>credential shortcuts</span></div></div>
+      <div className="proof-strip"><div><strong>3</strong><span>role tracks</span></div><div><strong>5</strong><span>platforms</span></div><div><strong>1</strong><span>live transition</span></div><div><strong>0</strong><span>credential shortcuts</span></div></div>
+      <PathExplorer onOpenPath={() => onView("roadmap")} />
       <div className="metric-row"><Metric label="Current week" value={`W${String(nextWeek.number).padStart(2, "0")}`} note={nextWeek.title} /><Metric label="Verified" value={String(verifiedCount)} note={`of ${WEEKS.length} milestones`} /><Metric label="Baseline" value={state.diagnostic.result ? `${state.diagnostic.result.score}/16` : "—"} note={state.diagnostic.result ? `${state.diagnostic.result.percentage}% signal` : "not taken yet"} /><Metric label="Rhythm" value={state.setup.rhythm || "—"} note="weekly commitment" /></div>
       <div className="dashboard-grid">
         <section className="panel next-panel"><div className="panel-kicker"><span className="kicker-number">NEXT</span> the immediate move</div><div className="next-index">W{String(nextWeek.number).padStart(2, "0")}</div><h2>{nextWeek.title}</h2><p>{nextWeek.summary}</p><div className="next-deliverable"><span>field test</span><strong>{nextWeek.deliverable}</strong></div><button className="button button-dark" type="button" onClick={() => onView("roadmap")}>Open roadmap <span aria-hidden="true">→</span></button></section>
         <section className="panel setup-panel"><div className="panel-kicker"><span className="kicker-number">W00</span> account &amp; safety</div><div className="section-heading"><div><h2>Earn the right to experiment.</h2><p>Write down the guardrails before the first bucket or warehouse.</p></div><span className={`status-pill ${setupReady ? "status-verified" : "status-not-started"}`}>{setupReady ? "ready" : "not ready"}</span></div><div className="gate-fields"><label className="field-label">Region<input value={state.setup.region} onChange={(event) => onUpdate((previous) => ({ ...previous, setup: { ...previous.setup, region: event.target.value } }))} placeholder="us-east-1" /></label><label className="field-label">Account plan<select value={state.setup.plan} onChange={(event) => onUpdate((previous) => ({ ...previous, setup: { ...previous.setup, plan: event.target.value } }))}><option value="">Select one</option><option>Free Tier</option><option>Paid / budgeted</option><option>Sandbox / organization</option></select></label><label className="field-label">Credit expiry<input type="date" value={state.setup.expiry} onChange={(event) => onUpdate((previous) => ({ ...previous, setup: { ...previous.setup, expiry: event.target.value } }))} /></label></div><div className="gate-checklist">{[["rootMfa", "Root MFA enabled"], ["nonRoot", "Non-root admin works"], ["budget", "Budget alert exists"], ["noOrg", "No unexpected organization"]].map(([key, label]) => <label key={key}><input type="checkbox" checked={state.setup.checks[key as keyof DashboardState["setup"]["checks"]]} onChange={(event) => onUpdate((previous) => ({ ...previous, setup: { ...previous.setup, checks: { ...previous.setup.checks, [key]: event.target.checked } } }))} /><span>{label}</span></label>)}</div><div className="setup-progress-note">{setupReady ? "Safety gate complete — proceed deliberately." : `${setupCount} / 4 guardrails checked`}</div></section>
       </div>
       <section className="panel translation-panel"><div className="section-heading"><div><div className="panel-kicker"><span className="kicker-number">MAP</span> translate the boundaries</div><h2>Your GCP → AWS translation desk.</h2></div><p>Learn the service boundary and the decision behind it—not a list of product names.</p></div><div className="translation-grid">{TRANSFERS.map((item) => <div className="translation-card" key={item.source}><span className="translation-gcp">{item.source}</span><span className="translation-arrow" aria-hidden="true">↘</span><strong className="translation-aws">{item.target}</strong><span className="translation-focus">{item.focus}</span></div>)}</div></section>
+    </section>
+  );
+}
+
+function PathExplorer({ onOpenPath }: { onOpenPath: () => void }) {
+  return (
+    <section className="path-library" id="path-library" aria-labelledby="path-library-title">
+      <div className="path-library-heading">
+        <div>
+          <div className="panel-kicker"><span className="kicker-number">LIBRARY</span> choose your bridge</div>
+          <h2 id="path-library-title">Start from what you already know.</h2>
+          <p>Open a role, choose your source platform, then see the destination bridges. Only the GCP → AWS Data Engineering route is live today; the rest stay visible as the library grows.</p>
+        </div>
+        <div className="path-library-count"><span>live now</span><strong>01</strong><small>of a growing route library</small></div>
+      </div>
+
+      <div className="path-group-list">
+        {PATH_CATALOG.map((group) => (
+          <details className={`path-group path-group-${group.status}`} key={group.key} open={group.key === "data-engineering"}>
+            <summary className="path-group-summary">
+              <span className="path-group-number">{group.number}</span>
+              <span className="path-group-title"><strong>{group.title}</strong><small>{group.description}</small></span>
+              <span className={`path-group-status path-group-status-${group.status}`}>{group.status === "active" ? "1 live route" : "coming soon"}</span>
+              <span className="path-summary-chevron" aria-hidden="true">↘</span>
+            </summary>
+            <div className="path-group-body">
+              <div className="path-source-list">
+                {group.sources.map((source, sourceIndex) => (
+                  <details className="path-source" key={source.key} open={group.key === "data-engineering" && source.key === "gcp"}>
+                    <summary className="path-source-summary">
+                      <span className="path-source-mark">{source.short}</span>
+                      <span className="path-source-title"><strong>{source.label}</strong><small>{source.credential}</small></span>
+                      <span className="path-source-index">{String(sourceIndex + 1).padStart(2, "0")} / {source.routes.length}</span>
+                      <span className="path-summary-chevron" aria-hidden="true">↘</span>
+                    </summary>
+                    <div className="path-route-grid">
+                      {source.routes.map((route) => (
+                        <article className={`path-route path-route-${route.status}`} key={route.key}>
+                          <div className="path-route-top"><span>{source.short}</span><span aria-hidden="true">→</span><span>{route.targetMark}</span><span className={`path-route-status path-route-status-${route.status}`}>{route.status === "available" ? "live" : "soon"}</span></div>
+                          <h3>{route.title}</h3>
+                          <p>{route.description}</p>
+                          {route.status === "available" ? (
+                            <button className="path-route-action" type="button" onClick={onOpenPath}>Open live path <span aria-hidden="true">↗</span></button>
+                          ) : (
+                            <span className="path-route-action path-route-action-disabled">Coming soon</span>
+                          )}
+                        </article>
+                      ))}
+                    </div>
+                  </details>
+                ))}
+              </div>
+            </div>
+          </details>
+        ))}
+      </div>
     </section>
   );
 }
