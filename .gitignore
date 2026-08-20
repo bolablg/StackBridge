@@ -8,3 +8,5 @@ __pycache__/
 *.tsbuildinfo
 .vercel/
 node_modules/
+.agents/
+skills-lock.json
