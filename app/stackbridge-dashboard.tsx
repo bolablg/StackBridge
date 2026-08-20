@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, CSSProperties, FormEvent, ReactNode } from "react";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import {
   DOMAIN_META,
   PATH_CATALOG,
@@ -21,6 +22,38 @@ const LEGACY_STORAGE_KEY = "aws-dea-dashboard-v1";
 const PATH_KEY = "gcp-to-aws-data-engineer";
 
 type View = "overview" | "roadmap" | "diagnostic" | "checkin" | "library";
+
+type NavigationScope = "home" | "domain" | "track";
+
+type NavigationContext = {
+  scope: NavigationScope;
+  domainKey?: string;
+  trackKey?: string;
+  view: View;
+};
+
+const DOMAIN_SLUG = "data-engineering";
+const TRACK_SLUG = "gcp-to-aws";
+const TRACK_LABEL = "GCP → AWS Data Engineering";
+const TRACK_PATH = `/${DOMAIN_SLUG}/${TRACK_SLUG}`;
+const VALID_VIEWS: View[] = ["overview", "roadmap", "diagnostic", "checkin", "library"];
+
+function parseNavigation(pathname: string): NavigationContext {
+  const segments = pathname.split("/").filter(Boolean);
+  if (segments[0] !== DOMAIN_SLUG) return { scope: "home", view: "overview" };
+  if (!segments[1]) return { scope: "domain", domainKey: DOMAIN_SLUG, view: "overview" };
+
+  const view = VALID_VIEWS.includes(segments[2] as View) ? segments[2] as View : "overview";
+  if (segments[1] === TRACK_SLUG) {
+    return { scope: "track", domainKey: DOMAIN_SLUG, trackKey: PATH_KEY, view };
+  }
+
+  return { scope: "domain", domainKey: DOMAIN_SLUG, view: "overview" };
+}
+
+function trackHref(view: View = "overview") {
+  return view === "overview" ? TRACK_PATH : `${TRACK_PATH}/${view}`;
+}
 
 type DashboardState = {
   version: 1;
@@ -172,7 +205,7 @@ function TextButton({ children, onClick, danger = false }: { children: ReactNode
 function ClerkHeaderActions({ isAdmin }: { isAdmin: boolean }) {
   return (
     <div className="clerk-header-actions">
-      {isAdmin && <a className="text-button text-button-main" href="/admin/access-requests">Access requests</a>}
+      {isAdmin && <Link className="text-button text-button-main" href="/admin/access-requests">Access requests</Link>}
       <Show when="signed-out">
         <Link className="text-button text-button-main" href="/sign-in">Sign in</Link>
         <Link className="button button-small button-dark" href="/sign-up">Create account</Link>
@@ -235,7 +268,10 @@ export default function StackBridgeDashboard({ clerkEnabled, isAdmin = false }: 
 
 function DashboardCore({ auth, isAdmin }: { auth: AuthState; isAdmin: boolean }) {
   const [state, setState] = useState<DashboardState>(() => createDefaultState());
-  const [view, setView] = useState<View>("overview");
+  const pathname = usePathname();
+  const router = useRouter();
+  const navigation = useMemo(() => parseNavigation(pathname || "/"), [pathname]);
+  const view = navigation.view;
   const [filter, setFilter] = useState<"all" | WeekStatus>("all");
   const [selectedWeek, setSelectedWeek] = useState(0);
   const [toast, setToast] = useState("");
@@ -245,6 +281,7 @@ function DashboardCore({ auth, isAdmin }: { auth: AuthState; isAdmin: boolean })
   const [diagnosticDomain, setDiagnosticDomain] = useState("all");
   const [importInputKey, setImportInputKey] = useState(0);
   const [online, setOnline] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const syncTimer = useRef<number | null>(null);
   const toastTimer = useRef<number | null>(null);
   const tokenGetter = auth.getToken;
@@ -256,9 +293,17 @@ function DashboardCore({ auth, isAdmin }: { auth: AuthState; isAdmin: boolean })
   }, []);
 
   const changeView = useCallback((nextView: View) => {
-    setView(nextView);
-    window.history.replaceState(null, "", `#${nextView}`);
-  }, []);
+    setMobileMenuOpen(false);
+    router.push(trackHref(nextView));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [router]);
+
+  const openPath = useCallback((pathKey: string = PATH_KEY) => {
+    setMobileMenuOpen(false);
+    if (pathKey === PATH_KEY) router.push(TRACK_PATH);
+    else router.push(`/${DOMAIN_SLUG}/${pathKey}`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [router]);
 
   const getHeaders = useCallback(async (json = false) => {
     const headers: Record<string, string> = { Accept: "application/json" };
@@ -280,6 +325,20 @@ function DashboardCore({ auth, isAdmin }: { auth: AuthState; isAdmin: boolean })
   }, []);
 
   useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileMenuOpen(false);
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [mobileMenuOpen]);
+
+  useEffect(() => {
     if (auth.clerkEnabled && !auth.isLoaded) return;
     const localState = readStoredState(auth.userId);
     // This effect intentionally hydrates state from the browser/database when the signed-in identity changes.
@@ -287,9 +346,6 @@ function DashboardCore({ auth, isAdmin }: { auth: AuthState; isAdmin: boolean })
     setState(localState);
     setHydrated(true);
     setRemoteReady(!auth.clerkEnabled || !auth.userId);
-    const hash = window.location.hash.slice(1) as View;
-    if (["overview", "roadmap", "diagnostic", "checkin", "library"].includes(hash)) setView(hash);
-
     if (!auth.userId || !auth.getToken) {
       setSyncStatus(auth.clerkEnabled ? "auth" : "browser");
       return;
@@ -502,52 +558,91 @@ function DashboardCore({ auth, isAdmin }: { auth: AuthState; isAdmin: boolean })
   return (
     <>
       <div className="app-shell">
-        <aside className="sidebar" aria-label="StackBridge navigation">
-          <div className="brand-lockup">
-            <div className="brand-mark" aria-hidden="true">SB</div>
-            <div>
-              <div className="brand-title">STACKBRIDGE</div>
-              <div className="brand-subtitle">path library / 01 live</div>
+        <aside className={`sidebar${mobileMenuOpen ? " is-mobile-open" : ""}`} aria-label="StackBridge navigation">
+          <div className="sidebar-header">
+            <Link className="brand-lockup" href="/" aria-label="StackBridge overview" onClick={() => setMobileMenuOpen(false)}>
+              <div className="brand-mark" aria-hidden="true">SB</div>
+              <div>
+                <div className="brand-title">STACKBRIDGE</div>
+                <div className="brand-subtitle">career bridge / path library</div>
+              </div>
+            </Link>
+            <span className="mobile-current-context">{navigation.scope === "track" ? "GCP → AWS" : navigation.scope === "domain" ? "Data Engineering" : "Path library"}</span>
+            <button className="mobile-menu-toggle" type="button" aria-expanded={mobileMenuOpen} aria-controls="stackbridge-menu" onClick={() => setMobileMenuOpen((open) => !open)}>
+              <span className="mobile-menu-icon" aria-hidden="true"><i /><i /></span>
+              <span>{mobileMenuOpen ? "Close" : "Menu"}</span>
+            </button>
+          </div>
+
+          <div className="sidebar-menu" id="stackbridge-menu">
+            {navigation.scope === "track" ? (
+              <>
+                <div className="sidebar-stamp" aria-label="Current learning path"><span>GCP</span><span className="stamp-arrow">→</span><span>AWS</span></div>
+                <div className="sidebar-context">
+                  <Link className="sidebar-context-back" href="/data-engineering" onClick={() => setMobileMenuOpen(false)}>← Data Engineering</Link>
+                  <span className="sidebar-context-kicker">selected path</span>
+                  <strong>{TRACK_LABEL}</strong>
+                  <small>one focused workspace</small>
+                </div>
+                <nav className="primary-nav" aria-label="Selected path">
+                  {([
+                    ["overview", "⌂", "Overview", "path brief"],
+                    ["roadmap", "↗", "Roadmap", "weeks 00—12"],
+                    ["diagnostic", "?", "Diagnostic", "baseline signal"],
+                    ["checkin", "＋", "Check-in", "capture the work"],
+                    ["library", "▤", "Library", "guides & links"],
+                  ] as Array<[View, string, string, string]>).map(([target, icon, title, subtitle]) => (
+                    <Link key={target} className={`nav-item${view === target ? " is-active" : ""}`} href={trackHref(target)} aria-current={view === target ? "page" : undefined} onClick={() => setMobileMenuOpen(false)}>
+                      <span className="nav-icon" aria-hidden="true">{icon}</span><span><strong>{title}</strong><small>{subtitle}</small></span>
+                    </Link>
+                  ))}
+                </nav>
+              </>
+            ) : (
+              <nav className="primary-nav primary-nav-library" aria-label="Path library">
+                <Link className={`nav-item${navigation.scope === "home" ? " is-active" : ""}`} href="/" aria-current={navigation.scope === "home" ? "page" : undefined} onClick={() => setMobileMenuOpen(false)}>
+                  <span className="nav-icon" aria-hidden="true">⌂</span><span><strong>Overview</strong><small>career runway</small></span>
+                </Link>
+                <details className="sidebar-domain" open={navigation.scope === "domain"}>
+                  <summary className="sidebar-domain-summary"><span className="nav-icon" aria-hidden="true">01</span><span><strong>Data Engineering</strong><small>choose a bridge</small></span><span className="sidebar-chevron" aria-hidden="true">↘</span></summary>
+                  <div className="sidebar-domain-links">
+                    <Link className={`sidebar-domain-link${navigation.scope === "domain" ? " is-active" : ""}`} href="/data-engineering" onClick={() => setMobileMenuOpen(false)}>All tracks <span>→</span></Link>
+                    <Link className="sidebar-domain-link" href={TRACK_PATH} onClick={() => setMobileMenuOpen(false)}>GCP → AWS <span className="sidebar-live-mark">live</span></Link>
+                    <span className="sidebar-domain-link is-disabled">GCP → Azure <span>soon</span></span>
+                    <span className="sidebar-domain-link is-disabled">GCP → Databricks <span>soon</span></span>
+                  </div>
+                </details>
+                <div className="sidebar-coming-soon"><span>coming next</span><strong>ML Engineering</strong><strong>Cloud Architecture</strong></div>
+              </nav>
+            )}
+            <div className="sidebar-bottom">
+              <div className="local-status"><span className={`status-dot status-dot-${syncStatus}`} /> <span>{syncStatus === "active" ? "auto-save → database" : syncStatus === "saving" ? "writing to database" : syncStatus === "browser" ? "browser storage only" : syncStatus === "auth" ? "sign-in required" : syncStatus === "setup" ? "hosted setup needed" : syncStatus === "error" ? "sync needs attention" : "sync checking"}</span></div>
+              <p>Your progress stays private. StackBridge keeps a browser copy and syncs your enrolled path when hosted auth is available.</p>
+              <div className="sidebar-tools">
+                <TextButton onClick={exportBackup}>Save backup</TextButton>
+                <label className="text-button" htmlFor={`import-file-${importInputKey}`}>Import<input key={importInputKey} id={`import-file-${importInputKey}`} type="file" accept="application/json" hidden onChange={importBackup} /></label>
+                <TextButton danger onClick={resetApp}>Reset</TextButton>
+              </div>
             </div>
           </div>
-          <div className="sidebar-stamp" aria-label="Current learning path"><span>GCP</span><span className="stamp-arrow">→</span><span>AWS</span></div>
-          <nav className="primary-nav" aria-label="Primary">
-            {([
-              ["overview", "⌂", "Overview", "your runway"],
-              ["roadmap", "↗", "Roadmap", "weeks 00—12"],
-              ["diagnostic", "?", "Diagnostic", "baseline signal"],
-              ["checkin", "＋", "Check-in", "capture the work"],
-              ["library", "▤", "Library", "guides & links"],
-            ] as Array<[View, string, string, string]>).map(([target, icon, title, subtitle]) => (
-              <button key={target} className={`nav-item${view === target ? " is-active" : ""}`} type="button" onClick={() => changeView(target)} aria-current={view === target ? "page" : undefined}>
-                <span className="nav-icon" aria-hidden="true">{icon}</span><span><strong>{title}</strong><small>{subtitle}</small></span>
-              </button>
-            ))}
-          </nav>
-          <div className="sidebar-bottom">
-            <div className="local-status"><span className={`status-dot status-dot-${syncStatus}`} /> <span>{syncStatus === "active" ? "auto-save → database" : syncStatus === "saving" ? "writing to database" : syncStatus === "browser" ? "browser storage only" : syncStatus === "auth" ? "sign-in required" : syncStatus === "setup" ? "hosted setup needed" : syncStatus === "error" ? "sync needs attention" : "sync checking"}</span></div>
-            <p>Your progress stays private. StackBridge keeps a browser copy and syncs your enrolled path when hosted auth is available.</p>
-            <div className="sidebar-tools">
-              <TextButton onClick={exportBackup}>Save backup</TextButton>
-              <label className="text-button" htmlFor={`import-file-${importInputKey}`}>Import<input key={importInputKey} id={`import-file-${importInputKey}`} type="file" accept="application/json" hidden onChange={importBackup} /></label>
-              <TextButton danger onClick={resetApp}>Reset</TextButton>
-            </div>
-          </div>
+          <button className="mobile-menu-backdrop" type="button" aria-label="Close navigation" tabIndex={mobileMenuOpen ? 0 : -1} onClick={() => setMobileMenuOpen(false)} />
         </aside>
 
         <main id="main-content" className="main-content">
           <header className="topbar">
-            <div className="topbar-context"><span className="live-dot" aria-hidden="true" /><span>{view === "overview" ? "StackBridge / path library" : view === "roadmap" ? "data engineering / study sequence" : view === "diagnostic" ? "baseline / 16 questions" : view === "checkin" ? "evidence log / weekly" : "reference desk / field notes"}</span></div>
+            <div className="topbar-context"><span className="live-dot" aria-hidden="true" /><span>{navigation.scope === "home" ? "StackBridge / overview" : navigation.scope === "domain" ? "data engineering / track library" : view === "overview" ? "GCP → AWS / path overview" : view === "roadmap" ? "GCP → AWS / study sequence" : view === "diagnostic" ? "GCP → AWS / baseline signal" : view === "checkin" ? "GCP → AWS / evidence log" : "GCP → AWS / reference desk"}</span></div>
             <div className="topbar-actions">
               <span className="network-status"><span className="network-dot" /> {online ? "online" : "offline · local save"}</span>
               <span className="save-state">{auth.userId ? auth.displayName : "saved locally"}</span>
               {auth.clerkEnabled ? <ClerkHeaderActions isAdmin={isAdmin} /> : <span className="local-mode-label">local mode</span>}
               <button className="icon-button" type="button" onClick={toggleTheme} aria-label="Switch theme">{state.preferences.theme === "dark" ? "☼" : "◐"}</button>
-              <button className="button button-small button-dark" type="button" onClick={() => changeView("checkin")}><span aria-hidden="true">＋</span> Log check-in</button>
+              {navigation.scope === "track" && <button className="button button-small button-dark topbar-checkin" type="button" aria-label="Log a check-in" onClick={() => changeView("checkin")}><span aria-hidden="true">＋</span><span className="topbar-checkin-label">Log check-in</span></button>}
             </div>
           </header>
 
-          {view === "overview" && <OverviewView state={state} completion={completion} verifiedCount={verifiedCount} nextWeek={nextWeek} setupCount={setupCount} setupReady={setupReady} onView={changeView} onUpdate={updateState} />}
+          {navigation.scope === "home" && <HomeOverviewView onOpenPath={openPath} />}
+          {navigation.scope === "domain" && <DomainOverviewView onOpenPath={openPath} />}
+          {navigation.scope === "track" && view === "overview" && <TrackOverviewView state={state} completion={completion} verifiedCount={verifiedCount} nextWeek={nextWeek} setupCount={setupCount} setupReady={setupReady} onView={changeView} onUpdate={updateState} />}
           {view === "roadmap" && <RoadmapView state={state} filter={filter} filteredWeeks={filteredWeeks} onFilter={setFilter} onStatus={setWeekStatus} onNote={setWeekNote} onView={changeView} />}
           {view === "diagnostic" && <DiagnosticView state={state} domain={diagnosticDomain} onDomain={setDiagnosticDomain} onUpdate={updateState} onSubmit={handleDiagnosticSubmit} />}
           {view === "checkin" && <CheckinView state={state} selectedWeek={selectedWeek} onWeek={setSelectedWeek} onDelete={(id) => updateState((previous) => ({ ...previous, checkins: previous.checkins.filter((item) => item.id !== id) }), "Check-in removed")} onSubmit={handleCheckinSubmit} />}
@@ -560,16 +655,56 @@ function DashboardCore({ auth, isAdmin }: { auth: AuthState; isAdmin: boolean })
   );
 }
 
-function OverviewView({ state, completion, verifiedCount, nextWeek, setupCount, setupReady, onView, onUpdate }: { state: DashboardState; completion: number; verifiedCount: number; nextWeek: typeof WEEKS[number]; setupCount: number; setupReady: boolean; onView: (view: View) => void; onUpdate: (updater: (previous: DashboardState) => DashboardState, message?: string) => void }) {
+function HomeOverviewView({ onOpenPath }: { onOpenPath: (pathKey?: string) => void }) {
+  return (
+    <section className="view is-visible home-overview">
+      <div className="hero-grid">
+        <div className="hero-copy reveal reveal-one">
+          <div className="eyebrow"><span className="eyebrow-line" /> StackBridge / career overview</div>
+          <h1>Make your next platform feel <em>like a continuation.</em></h1>
+          <p className="hero-lede">StackBridge turns the expertise you already have into a deliberate path toward the roles, platforms, and credentials you want next. Choose a track, then open one focused bridge.</p>
+          <div className="hero-actions"><a className="button button-primary" href="#path-library">Explore transition paths <span aria-hidden="true">↘</span></a><Link className="button button-quiet" href={TRACK_PATH}>Open the live path</Link></div>
+        </div>
+        <div className="home-signal-card reveal reveal-two">
+          <div className="home-signal-kicker">career graph / now</div>
+          <div className="home-signal-title">Your role is the constant.</div>
+          <p>Translate systems judgment, operating habits, and evidence across the boundary. The destination changes. The engineering muscle compounds.</p>
+          <div className="home-signal-route"><span>role</span><strong>Data Engineering</strong><span className="home-signal-arrow">→</span><span>live bridge</span><strong>GCP → AWS</strong></div>
+          <div className="home-signal-footer"><span className="live-dot" aria-hidden="true" /> one live path, more on the way</div>
+        </div>
+      </div>
+      <div className="proof-strip"><div><strong>3</strong><span>role tracks</span></div><div><strong>5</strong><span>platform profiles</span></div><div><strong>1</strong><span>live transition</span></div><div><strong>0</strong><span>credential shortcuts</span></div></div>
+      <PathExplorer onOpenPath={onOpenPath} />
+    </section>
+  );
+}
+
+function DomainOverviewView({ onOpenPath }: { onOpenPath: (pathKey?: string) => void }) {
+  const group = PATH_CATALOG.find((item) => item.key === DOMAIN_SLUG);
+  const liveRoute = group?.sources.flatMap((source) => source.routes).find((route) => route.status === "available");
+  return (
+    <section className="view is-visible domain-overview">
+      <div className="page-intro domain-intro"><div><div className="eyebrow"><span className="eyebrow-line" /> career track / data engineering</div><h1>Choose the bridge<br /><em>that compounds.</em></h1><p>One role track, several platform transitions. Start with a route that respects what you already know, then build evidence in the destination system.</p></div><div className="page-intro-aside"><span className="big-annotation">01 LIVE</span><span>data engineering<br />path library<br />focused routes</span></div></div>
+      <div className="domain-summary-grid">
+        <section className="panel domain-feature-card"><div className="panel-kicker"><span className="kicker-number">LIVE</span> current bridge</div><div className="domain-feature-route"><strong>GCP</strong><span>→</span><strong>AWS</strong></div><h2>AWS Certified Data Engineer — Associate</h2><p>Translate BigQuery, Dataform, Dataflow, Composer, and your production operating model into AWS services and DEA-C01 exam judgment.</p><div className="domain-feature-meta"><span><b>source</b> Google Cloud</span><span><b>destination</b> AWS</span><span><b>status</b> ready to open</span></div><button className="button button-dark" type="button" onClick={() => onOpenPath(liveRoute?.pathKey)} >Open live path <span aria-hidden="true">↗</span></button></section>
+        <section className="panel domain-principles-card"><div className="panel-kicker"><span className="kicker-number">METHOD</span> how the path works</div><div className="domain-principle"><span>01</span><div><strong>Map the boundary</strong><p>See the service and operating-model translation before memorizing names.</p></div></div><div className="domain-principle"><span>02</span><div><strong>Practice the decision</strong><p>Use small labs to make reliability, cost, security, and recovery visible.</p></div></div><div className="domain-principle"><span>03</span><div><strong>Leave evidence</strong><p>Turn each week into a proof point you can explain in an interview.</p></div></div></section>
+      </div>
+      <div className="section-heading domain-coming-heading"><div><div className="panel-kicker"><span className="kicker-number">NEXT</span> route library</div><h2>More bridges are being prepared.</h2></div><p>Only the live route opens a full workspace today. Coming-soon routes stay visible so the shape of your career graph is never a mystery.</p></div>
+      <div className="domain-route-grid"><div className="domain-route-card is-live"><div><span className="domain-route-mark">GCP → AWS</span><span className="path-route-status path-route-status-available">live</span></div><h3>AWS Data Engineer Associate</h3><p>Warehouse, orchestration, governance, streaming, and cost translation.</p><button className="path-route-action" type="button" onClick={() => onOpenPath(liveRoute?.pathKey)}>Open workspace <span aria-hidden="true">↗</span></button></div><div className="domain-route-card"><div><span className="domain-route-mark">GCP → AZURE</span><span className="path-route-status path-route-status-coming-soon">soon</span></div><h3>Azure Data Engineering</h3><p>Synapse, Fabric, Data Factory, governance, and platform operations.</p><span className="path-route-action path-route-action-disabled">Coming soon</span></div><div className="domain-route-card"><div><span className="domain-route-mark">GCP → DBX</span><span className="path-route-status path-route-status-coming-soon">soon</span></div><h3>Databricks Data Engineering</h3><p>Lakehouse design, Spark workloads, Delta, orchestration, and delivery.</p><span className="path-route-action path-route-action-disabled">Coming soon</span></div></div>
+    </section>
+  );
+}
+
+function TrackOverviewView({ state, completion, verifiedCount, nextWeek, setupCount, setupReady, onView, onUpdate }: { state: DashboardState; completion: number; verifiedCount: number; nextWeek: typeof WEEKS[number]; setupCount: number; setupReady: boolean; onView: (view: View) => void; onUpdate: (updater: (previous: DashboardState) => DashboardState, message?: string) => void }) {
   const orbitStyle = { "--progress": `${completion * 3.6}deg`, "--progress-pct": `${completion}%` } as CSSProperties;
   return (
     <section className="view is-visible">
       <div className="hero-grid">
         <div className="hero-copy reveal reveal-one">
-          <div className="eyebrow"><span className="eyebrow-line" /> StackBridge / path library</div>
-          <h1>Carry your data &amp; AI expertise <em>across cloud platforms.</em></h1>
-          <p className="hero-lede">Your role is the constant. Your platform is the bridge. Start from the certification or environment you already know, then translate the services, operating model, and exam language for where you want to go next.</p>
-          <div className="hero-actions"><button className="button button-primary" type="button" onClick={() => document.getElementById("path-library")?.scrollIntoView({ behavior: "smooth", block: "start" })}>Explore transition paths <span aria-hidden="true">↘</span></button><button className="button button-quiet" type="button" onClick={() => onView("diagnostic")}>Take baseline</button></div>
+          <div className="eyebrow"><span className="eyebrow-line" /> live path / data engineering</div>
+          <h1>Carry your data &amp; AI expertise <em>across the boundary.</em></h1>
+          <p className="hero-lede">This is your focused GCP → AWS workspace. Translate the services, operating model, and exam language, then leave evidence that proves the transfer.</p>
+          <div className="hero-actions"><button className="button button-primary" type="button" onClick={() => onView("roadmap")}>Open the runway <span aria-hidden="true">↘</span></button><button className="button button-quiet" type="button" onClick={() => onView("diagnostic")}>Take baseline</button></div>
         </div>
         <div className="progress-card reveal reveal-two">
           <div className="progress-card-label">current live path</div>
@@ -579,7 +714,6 @@ function OverviewView({ state, completion, verifiedCount, nextWeek, setupCount, 
         </div>
       </div>
       <div className="proof-strip"><div><strong>3</strong><span>role tracks</span></div><div><strong>5</strong><span>platforms</span></div><div><strong>1</strong><span>live transition</span></div><div><strong>0</strong><span>credential shortcuts</span></div></div>
-      <PathExplorer onOpenPath={() => onView("roadmap")} />
       <div className="metric-row"><Metric label="Current week" value={`W${String(nextWeek.number).padStart(2, "0")}`} note={nextWeek.title} /><Metric label="Verified" value={String(verifiedCount)} note={`of ${WEEKS.length} milestones`} /><Metric label="Baseline" value={state.diagnostic.result ? `${state.diagnostic.result.score}/16` : "—"} note={state.diagnostic.result ? `${state.diagnostic.result.percentage}% signal` : "not taken yet"} /><Metric label="Rhythm" value={state.setup.rhythm || "—"} note="weekly commitment" /></div>
       <div className="dashboard-grid">
         <section className="panel next-panel"><div className="panel-kicker"><span className="kicker-number">NEXT</span> the immediate move</div><div className="next-index">W{String(nextWeek.number).padStart(2, "0")}</div><h2>{nextWeek.title}</h2><p>{nextWeek.summary}</p><div className="next-deliverable"><span>field test</span><strong>{nextWeek.deliverable}</strong></div><button className="button button-dark" type="button" onClick={() => onView("roadmap")}>Open roadmap <span aria-hidden="true">→</span></button></section>
@@ -590,7 +724,7 @@ function OverviewView({ state, completion, verifiedCount, nextWeek, setupCount, 
   );
 }
 
-function PathExplorer({ onOpenPath }: { onOpenPath: () => void }) {
+function PathExplorer({ onOpenPath }: { onOpenPath: (pathKey?: string) => void }) {
   return (
     <section className="path-library" id="path-library" aria-labelledby="path-library-title">
       <div className="path-library-heading">
@@ -628,7 +762,7 @@ function PathExplorer({ onOpenPath }: { onOpenPath: () => void }) {
                           <h3>{route.title}</h3>
                           <p>{route.description}</p>
                           {route.status === "available" ? (
-                            <button className="path-route-action" type="button" onClick={onOpenPath}>Open live path <span aria-hidden="true">↗</span></button>
+                            <button className="path-route-action" type="button" onClick={() => onOpenPath(route.pathKey)}>Open live path <span aria-hidden="true">↗</span></button>
                           ) : (
                             <span className="path-route-action path-route-action-disabled">Coming soon</span>
                           )}

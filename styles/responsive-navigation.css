@@ -1,0 +1,79 @@
+/*
+ * Loaded after dashboard.css so the mobile navigation remains authoritative
+ * even while the legacy dashboard stylesheet is progressively consolidated.
+ */
+
+@media (max-width: 900px) {
+  .sidebar {
+    position: sticky;
+    z-index: 40;
+    top: 0;
+    display: flex;
+    width: 100%;
+    min-height: 72px;
+    height: 72px;
+    padding: 12px 16px;
+    overflow: visible;
+  }
+
+  .sidebar-menu .sidebar-stamp {
+    position: static;
+    top: auto;
+    right: auto;
+    width: fit-content;
+    margin: 0 0 18px;
+  }
+
+  .sidebar-menu .primary-nav,
+  .sidebar-menu .primary-nav-library {
+    display: grid;
+    width: 100%;
+    gap: 5px;
+    margin-top: 0;
+    overflow: visible;
+  }
+
+  .sidebar-menu .nav-item {
+    min-height: 54px;
+    flex: none;
+    justify-content: flex-start;
+    border: 1px solid transparent;
+    border-radius: 8px;
+  }
+
+  .sidebar-menu .nav-item:hover,
+  .sidebar-menu .nav-item.is-active {
+    border-color: rgba(247, 243, 235, 0.11);
+    border-top-color: rgba(247, 243, 235, 0.11);
+    border-left-color: rgba(247, 243, 235, 0.11);
+    box-shadow: inset 3px 0 0 var(--ember);
+  }
+
+  .sidebar-menu {
+    top: 72px;
+    min-height: calc(100dvh - 72px);
+    padding-top: 20px;
+  }
+}
+
+@media (max-width: 620px) {
+  .sidebar {
+    min-height: 66px;
+    height: 66px;
+    padding: 10px 14px;
+  }
+
+  .sidebar-menu {
+    top: 66px;
+    min-height: calc(100dvh - 66px);
+    padding-top: 18px;
+  }
+
+  .topbar {
+    min-height: 58px;
+  }
+
+  .topbar-context {
+    max-width: 145px;
+  }
+}
