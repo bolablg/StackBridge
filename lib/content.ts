@@ -153,6 +153,102 @@ export const TRANSFERS = [
   { source: "Secret Manager", target: "Secrets Manager", focus: "runtime secrets" },
 ];
 
+export type PathRouteStatus = "available" | "coming-soon";
+
+export type PathRoute = {
+  key: string;
+  targetKey: string;
+  targetLabel: string;
+  targetMark: string;
+  title: string;
+  description: string;
+  status: PathRouteStatus;
+  pathKey?: string;
+};
+
+export type PathSource = {
+  key: string;
+  label: string;
+  short: string;
+  credential: string;
+  routes: PathRoute[];
+};
+
+export type PathGroup = {
+  key: string;
+  number: string;
+  title: string;
+  description: string;
+  status: "active" | "coming-soon";
+  sources: PathSource[];
+};
+
+const PATH_PLATFORMS = [
+  { key: "gcp", label: "Google Cloud", short: "GCP" },
+  { key: "aws", label: "AWS", short: "AWS" },
+  { key: "azure", label: "Microsoft Azure", short: "AZ" },
+  { key: "snowflake", label: "Snowflake", short: "SF" },
+  { key: "databricks", label: "Databricks", short: "DBX" },
+] as const;
+
+const ROLE_TRACKS = [
+  {
+    key: "data-engineering",
+    number: "01",
+    title: "Data engineering",
+    description: "Move pipeline, warehouse, governance, and reliability judgment between platforms.",
+  },
+  {
+    key: "machine-learning",
+    number: "02",
+    title: "Machine learning engineering",
+    description: "Translate model delivery, feature systems, training, and serving patterns.",
+  },
+  {
+    key: "cloud-architecture",
+    number: "03",
+    title: "Cloud architecture",
+    description: "Carry systems thinking across networking, security, reliability, and cost boundaries.",
+  },
+] as const;
+
+/**
+ * The path library is intentionally data-driven. New role tracks and platform
+ * bridges can be added here without changing the homepage layout.
+ */
+export const PATH_CATALOG: PathGroup[] = ROLE_TRACKS.map((track) => ({
+  key: track.key,
+  number: track.number,
+  title: track.title,
+  description: track.description,
+  status: track.key === "data-engineering" ? "active" : "coming-soon",
+  sources: PATH_PLATFORMS.map((source) => ({
+    key: source.key,
+    label: source.label,
+    short: source.short,
+    credential: track.key === "data-engineering" && source.key === "gcp"
+      ? "Professional Data Engineer"
+      : "Source profile / coming soon",
+    routes: PATH_PLATFORMS
+      .filter((target) => target.key !== source.key)
+      .map((target) => {
+        const isAvailable = track.key === "data-engineering" && source.key === "gcp" && target.key === "aws";
+        return {
+          key: `${source.key}-to-${target.key}-${track.key}`,
+          targetKey: target.key,
+          targetLabel: target.label,
+          targetMark: target.short,
+          title: isAvailable ? "AWS Certified Data Engineer — Associate" : `${target.label} transition blueprint`,
+          description: isAvailable
+            ? "Translate BigQuery, Dataform, Dataflow, and Composer judgment into AWS services and the DEA-C01 exam."
+            : "The role, service map, and certification bridge are being prepared.",
+          status: isAvailable ? "available" : "coming-soon",
+          ...(isAvailable ? { pathKey: "gcp-to-aws-data-engineer" } : {}),
+        };
+      }),
+  })),
+}));
+
 export const CORE_RESOURCES = [
   { number: "01", title: "Start Here", description: "Current status, first 30 minutes, and the GCP → AWS map.", href: "/guides/AWS-DATA-ENGINEER-START-HERE.md", type: "local" },
   { number: "02", title: "Completion audit", description: "Prepared material versus learner evidence still needed.", href: "/guides/AWS-DATA-ENGINEER-COMPLETION-AUDIT.md", type: "local" },

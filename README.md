@@ -1,8 +1,18 @@
-# StackBridge — Data Engineering: GCP → AWS
+# StackBridge — Carry expertise across cloud platforms
 
-StackBridge helps certified practitioners carry their data and AI expertise across platforms. Version one is the GCP → AWS Data Engineering path: a Google Cloud Professional Data Engineer translating existing skills into AWS and preparing for the AWS Certified Data Engineer — Associate exam.
+> Carry your data and AI expertise across cloud platforms.
 
-The product is built to grow into paths such as AWS → Azure, Snowflake → Databricks, cloud architecture, and ML engineering without changing the core user, path, or progress model.
+StackBridge is a private learning and accountability workspace for people who already have real expertise in one platform and want to transfer it to another. The role is the constant; the platform is the bridge.
+
+The path library is organized by professional profile and source platform. A learner can start with data engineering, machine learning engineering, or cloud architecture, choose the environment they already know, and see the destination bridges available for that profile.
+
+Version one has one live route: a Google Cloud Professional Data Engineer moving into AWS and preparing for the AWS Certified Data Engineer — Associate exam. The other role and platform combinations remain visible as coming-soon routes so the product can grow without changing its core user, path, or progress model.
+
+## Path library
+
+- **Data engineering** — GCP → AWS is live; GCP → Azure, Snowflake, and Databricks are coming soon.
+- **Machine learning engineering** — role and platform bridges are coming soon.
+- **Cloud architecture** — role and platform bridges are coming soon.
 
 ## What is included
 
@@ -48,7 +58,7 @@ clerk doctor
 
 Use this folder as the Vercel project root. Vercel will detect the Next.js build and use the scripts in `package.json`.
 
-The production domain is [bolablg-stackbridge.vercel.app](https://bolablg-stackbridge.vercel.app). The shorter `stackbridge.vercel.app` name is already assigned to another Vercel project.
+The production website is [stackbridge.bolablg.com](https://stackbridge.bolablg.com). The Vercel fallback domain is [bolablg-stackbridge.vercel.app](https://bolablg-stackbridge.vercel.app); the shorter `stackbridge.vercel.app` name is already assigned to another Vercel project.
 
 Set these environment variables in Vercel for Preview and Production:
 

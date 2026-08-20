@@ -4,8 +4,8 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "StackBridge — GCP → AWS Data Engineering",
-  description: "Carry data and AI expertise across platforms.",
+  title: "StackBridge — Carry expertise across cloud platforms",
+  description: "Carry your data and AI expertise across cloud platforms.",
   manifest: "/manifest.json",
   icons: {
     icon: "/favicon.svg",
