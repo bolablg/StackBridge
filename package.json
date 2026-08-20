@@ -2,7 +2,7 @@
   "name": "stackbridge",
   "private": true,
   "version": "1.0.0",
-  "description": "StackBridge cross-platform data and AI learning dashboard",
+  "description": "StackBridge cross-platform data, AI, and cloud expertise workspace",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

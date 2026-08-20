@@ -2,15 +2,14 @@ import { auth } from "@clerk/nextjs/server";
 import AccessGate from "./access-gate";
 import StackBridgeDashboard from "./stackbridge-dashboard";
 import { getAccessDecision } from "../lib/server/access";
-import { getAppSession } from "../lib/server/auth";
+import { getAppSession, hostedAuthConfigured } from "../lib/server/auth";
+import { isLocalMode } from "../lib/server/config";
 
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
-  const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
-  if (!clerkEnabled || !process.env.CLERK_SECRET_KEY) {
-    return <StackBridgeDashboard clerkEnabled={clerkEnabled} />;
-  }
+  if (isLocalMode()) return <StackBridgeDashboard clerkEnabled={false} />;
+  if (!hostedAuthConfigured()) return <HostedConfigurationMessage />;
 
   const { isAuthenticated } = await auth();
   if (!isAuthenticated) return <StackBridgeDashboard clerkEnabled />;
@@ -32,4 +31,16 @@ export default async function Page() {
   }
 
   return <StackBridgeDashboard clerkEnabled isAdmin={access.isAdmin} />;
+}
+
+function HostedConfigurationMessage() {
+  return (
+    <main className="runtime-message">
+      <section>
+        <div className="eyebrow"><span className="eyebrow-line" /> StackBridge / hosted configuration</div>
+        <h1>Hosted mode needs its connections.</h1>
+        <p>Set <code>STACKBRIDGE_MODE=local</code> for a browser-only contributor setup, or configure Clerk and Neon before running this deployment.</p>
+      </section>
+    </main>
+  );
 }

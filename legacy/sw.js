@@ -1,14 +1,14 @@
-const CACHE_NAME = "stackbridge-shell-v3";
+const CACHE_NAME = "stackbridge-legacy-shell-v4";
 const SHELL = [
   "./",
   "./index.html",
-  "./styles.css",
+  "../styles/dashboard.css",
   "./app.js",
   "./manifest.json",
-  "./favicon.svg",
-  "./icon.svg",
-  "./icon-192.png",
-  "./icon-512.png",
+  "./assets/favicon.svg",
+  "./assets/icon.svg",
+  "./assets/icon-192.png",
+  "./assets/icon-512.png",
 ];
 
 self.addEventListener("install", (event) => {

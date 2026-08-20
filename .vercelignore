@@ -1,8 +1,5 @@
-progress.json
-server.py
-run-dashboard.command
-__pycache__/
-*.pyc
+legacy/
+local/
 .env
 .env.*
 !.env.example
