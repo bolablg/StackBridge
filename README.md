@@ -48,6 +48,8 @@ clerk doctor
 
 Use this folder as the Vercel project root. Vercel will detect the Next.js build and use the scripts in `package.json`.
 
+The production domain is [bolablg-stackbridge.vercel.app](https://bolablg-stackbridge.vercel.app). The shorter `stackbridge.vercel.app` name is already assigned to another Vercel project.
+
 Set these environment variables in Vercel for Preview and Production:
 
 - `DATABASE_URL` — supplied by a Neon Postgres integration.
