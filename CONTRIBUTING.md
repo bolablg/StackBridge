@@ -25,7 +25,7 @@ npm run dev
 
 The example configuration sets `STACKBRIDGE_MODE=local`. In local mode:
 
-- Clerk is not loaded.
+- Clerk is not initialized or invoked.
 - Clerk middleware is not run.
 - Neon and hosted APIs are not required.
 - Progress is kept in the browser for the local user.
@@ -51,9 +51,14 @@ npm run build
 ## Project structure
 
 - `app/` — Next.js routes, UI, Clerk integration, and API handlers.
+- `styles/` — shared dashboard styles used by the current and legacy interfaces.
 - `lib/content.ts` — role/platform path catalog and current learning content.
 - `lib/server/` — runtime configuration, authentication, access control, database, and path services.
 - `public/guides/` — Markdown learning guides shipped with the app.
+- `public/images/` — PWA image assets.
+- `local/` — optional local-development launchers.
+- `legacy/` — the older static/Python fallback; it is not the primary application path.
+- `db/` and `docs/adr/` — database reference material and architecture decisions.
 - `.github/workflows/ci.yml` — quality checks and automatic development-to-staging PR creation.
 
 Keep new paths data-driven. A new role or platform should normally be represented in the path catalog and its server definition rather than by duplicating dashboard components.

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Local launcher with file-backed progress persistence.
+"""Legacy local server with file-backed progress persistence.
 
-The dashboard is still a static frontend. This tiny server only adds two local
-endpoints so the browser can read and write progress.json beside the app.
+The legacy dashboard is a static frontend. This tiny server only adds two local
+endpoints so the browser can read and write progress.json beside the fallback.
 It never calls an external service.
 """
 

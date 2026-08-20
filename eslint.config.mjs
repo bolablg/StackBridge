@@ -7,7 +7,6 @@ const config = [
       ".next/**",
       "node_modules/**",
       "api/**",
-      "app.js",
       "legacy/**",
     ],
   },

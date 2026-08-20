@@ -2,10 +2,10 @@ const CACHE_NAME = "stackbridge-shell-v4";
 const SHELL = [
   "/",
   "/manifest.json",
-  "/favicon.svg",
-  "/icon.svg",
-  "/icon-192.png",
-  "/icon-512.png",
+  "/images/favicon.svg",
+  "/images/icon.svg",
+  "/images/icon-192.png",
+  "/images/icon-512.png",
 ];
 
 self.addEventListener("install", (event) => {
