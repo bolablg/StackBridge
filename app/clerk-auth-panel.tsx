@@ -5,11 +5,11 @@ import Link from "next/link";
 
 const appearance = {
   variables: {
-    colorPrimary: "#bd7464",
+    colorPrimary: "#a45d52",
     colorBackground: "transparent",
     colorText: "#2d3b3c",
-    colorTextSecondary: "#6f7c79",
-    borderRadius: "7px",
+    colorTextSecondary: "#626f6d",
+    borderRadius: "14px",
     fontFamily: '"Avenir Next", "Trebuchet MS", "Segoe UI", sans-serif',
   },
   options: {
