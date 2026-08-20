@@ -90,8 +90,4 @@ jobs:
             --head "$BRANCH_NAME" \
             --draft \
             --title "promote: $BRANCH_NAME → staging" \
-            --body "## Automated staging promotion
-
-This draft pull request was opened automatically after **$BRANCH_NAME** passed the quality workflow.
-
-Please review the diff and mark it ready when it is suitable for staging. Merging remains a human-controlled action."
+            --body "Automated staging promotion: $BRANCH_NAME passed quality. Review the diff and mark this draft ready before merging."
