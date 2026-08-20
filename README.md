@@ -90,14 +90,15 @@ The PWA shell can reopen without a network. Database synchronization requires co
 
 ## Branch workflow
 
-- `dev-bola` — active development and feature work.
+- `dev-*` — active development and feature work. The current branch is `dev-bola`.
 - `staging` — pre-production validation and deployment previews.
 - `main` — production deployment branch.
 
 ### CI/CD promotion flow
 
-- Every push to `dev-bola` runs the GitHub Actions `quality` check (`npm ci`, lint, and build) and creates a Vercel preview.
-- A pull request from `dev-bola` into `staging` runs the same quality check and receives a Vercel pull-request preview. Merging it updates the staging branch deployment.
+- Every push to a `dev-*` branch runs the GitHub Actions `quality` check (`npm ci`, lint, and build) and creates a Vercel preview.
+- After that quality check passes, GitHub Actions automatically opens or reuses a draft pull request from the development branch into `staging`. The automation never merges the pull request; a maintainer reviews it, marks it ready, and merges it when appropriate.
+- A pull request from a `dev-*` branch into `staging` runs the same quality check and receives a Vercel pull-request preview. Merging it updates the staging branch deployment.
 - A pull request from `staging` into `main` must pass both `quality` and the Vercel check. Merging it is the only production release path because `main` is protected.
 - `staging` and `main` reject direct pushes, force pushes, and unresolved review conversations. They currently require a pull request and passing checks; review approval can be increased later if the project gains additional maintainers.
 
