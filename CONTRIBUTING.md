@@ -54,7 +54,7 @@ npm run build
 - `styles/` — shared dashboard styles used by the current and legacy interfaces.
 - `lib/content.ts` — role/platform path catalog and current learning content.
 - `lib/server/` — runtime configuration, authentication, access control, database, and path services.
-- `public/guides/` — Markdown learning guides shipped with the app.
+- `guides/` — Markdown learning-guide source files. They are rendered through the in-app guide viewer and are intentionally not served as raw public assets.
 - `public/images/` — PWA image assets.
 - `local/` — optional local-development launchers.
 - `legacy/` — the older static/Python fallback; it is not the primary application path.

@@ -1,5 +1,6 @@
 @import "../styles/dashboard.css";
 @import "../styles/responsive-navigation.css";
+@import "../styles/guide-viewer.css";
 
 .app-loading {
   min-height: 100vh;
