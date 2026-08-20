@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getAccessDecision } from "../../../lib/server/access";
 import { getAppSession, hostedAuthConfigured } from "../../../lib/server/auth";
 import { ensureEnrollment, publicPath, type PathRow } from "../../../lib/server/paths";
 
@@ -20,6 +21,8 @@ export async function GET(request: Request) {
   try {
     const session = await getAppSession();
     if (!session) return authError();
+    const access = await getAccessDecision(session.user, session.sql);
+    if (access.status !== "allowed") return NextResponse.json({ error: "Access approval required." }, { status: 403 });
     const pathKey = requestedPath(request);
     const enrollment = await ensureEnrollment(session, pathKey);
     if (!enrollment) return NextResponse.json({ error: "You are not enrolled in this learning path." }, { status: 403 });
@@ -42,6 +45,8 @@ export async function PUT(request: Request) {
   try {
     const session = await getAppSession();
     if (!session) return authError();
+    const access = await getAccessDecision(session.user, session.sql);
+    if (access.status !== "allowed") return NextResponse.json({ error: "Access approval required." }, { status: 403 });
     const pathKey = requestedPath(request);
     const enrollment = await ensureEnrollment(session, pathKey);
     if (!enrollment) return NextResponse.json({ error: "You are not enrolled in this learning path." }, { status: 403 });

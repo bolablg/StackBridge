@@ -12,6 +12,7 @@ import {
   type WeekStatus,
 } from "../lib/content";
 import { Show, SignInButton, SignUpButton, UserButton, useAuth, useUser } from "@clerk/nextjs";
+import AccessGate from "./access-gate";
 
 const LEGACY_STORAGE_KEY = "aws-dea-dashboard-v1";
 const PATH_KEY = "gcp-to-aws-data-engineer";
@@ -76,6 +77,15 @@ type AuthState = {
   userId: string | null;
   displayName: string;
   getToken?: () => Promise<string | null>;
+};
+
+type AccessPayload = {
+  status: "allowed" | "pending" | "denied" | "not_requested";
+  isAdmin: boolean;
+  email: string;
+  displayName: string;
+  adminEmail: string;
+  requestId?: string;
 };
 
 function createDefaultState(): DashboardState {
@@ -156,9 +166,10 @@ function TextButton({ children, onClick, danger = false }: { children: ReactNode
   return <button className={`text-button${danger ? " text-button-danger" : ""}`} type="button" onClick={onClick}>{children}</button>;
 }
 
-function ClerkHeaderActions() {
+function ClerkHeaderActions({ isAdmin }: { isAdmin: boolean }) {
   return (
     <div className="clerk-header-actions">
+      {isAdmin && <a className="text-button text-button-main" href="/admin/access-requests">Access requests</a>}
       <Show when="signed-out">
         <SignInButton mode="modal">
           <button className="text-button text-button-main" type="button">Sign in</button>
@@ -196,19 +207,52 @@ function ClerkAuthGate() {
   );
 }
 
-function ClerkDashboard() {
+function ClerkDashboard({ isAdmin }: { isAdmin: boolean }) {
   const { isLoaded, userId, getToken } = useAuth();
   const { user } = useUser();
   const displayName = user?.fullName || user?.firstName || user?.primaryEmailAddress?.emailAddress || "Learner";
+  const [accessCheck, setAccessCheck] = useState<{ userId: string; decision?: AccessPayload; error?: string } | null>(null);
+
+  useEffect(() => {
+    const activeUserId = typeof userId === "string" ? userId : "";
+    if (!isLoaded || !activeUserId) return;
+    let cancelled = false;
+
+    async function checkAccess() {
+      try {
+        const response = await fetch("/api/access", { cache: "no-store" });
+        const payload = await response.json() as AccessPayload & { error?: string };
+        if (!response.ok) throw new Error(payload.error || "Could not verify access.");
+        if (!cancelled) setAccessCheck({ userId: activeUserId, decision: payload });
+      } catch (error) {
+        if (!cancelled) setAccessCheck({ userId: activeUserId, error: error instanceof Error ? error.message : "Could not verify access." });
+      }
+    }
+
+    void checkAccess();
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoaded, userId]);
+
+  const currentAccess = userId && accessCheck?.userId === userId ? accessCheck : null;
+  if (userId && !currentAccess) return <div className="app-loading">Checking your StackBridge access…</div>;
+  if (userId && currentAccess?.error) {
+    return <div className="app-loading"><span>{currentAccess.error} Please reload and try again.</span></div>;
+  }
+  if (userId && currentAccess?.decision && currentAccess.decision.status !== "allowed") {
+    return <AccessGate {...currentAccess.decision} status={currentAccess.decision.status} />;
+  }
+
   const auth: AuthState = { clerkEnabled: true, isLoaded, userId: userId || null, displayName, getToken };
-  return <DashboardCore auth={auth} />;
+  return <DashboardCore auth={auth} isAdmin={currentAccess?.decision?.isAdmin || isAdmin} />;
 }
 
-export default function StackBridgeDashboard({ clerkEnabled }: { clerkEnabled: boolean }) {
-  return clerkEnabled ? <ClerkDashboard /> : <DashboardCore auth={{ clerkEnabled: false, isLoaded: true, userId: null, displayName: "" }} />;
+export default function StackBridgeDashboard({ clerkEnabled, isAdmin = false }: { clerkEnabled: boolean; isAdmin?: boolean }) {
+  return clerkEnabled ? <ClerkDashboard isAdmin={isAdmin} /> : <DashboardCore auth={{ clerkEnabled: false, isLoaded: true, userId: null, displayName: "" }} isAdmin={false} />;
 }
 
-function DashboardCore({ auth }: { auth: AuthState }) {
+function DashboardCore({ auth, isAdmin }: { auth: AuthState; isAdmin: boolean }) {
   const [state, setState] = useState<DashboardState>(() => createDefaultState());
   const [view, setView] = useState<View>("overview");
   const [filter, setFilter] = useState<"all" | WeekStatus>("all");
@@ -516,7 +560,7 @@ function DashboardCore({ auth }: { auth: AuthState }) {
             <div className="topbar-actions">
               <span className="network-status"><span className="network-dot" /> {online ? "online" : "offline · local save"}</span>
               <span className="save-state">{auth.userId ? auth.displayName : "saved locally"}</span>
-              {auth.clerkEnabled ? <ClerkHeaderActions /> : <span className="local-mode-label">local mode</span>}
+              {auth.clerkEnabled ? <ClerkHeaderActions isAdmin={isAdmin} /> : <span className="local-mode-label">local mode</span>}
               <button className="icon-button" type="button" onClick={toggleTheme} aria-label="Switch theme">{state.preferences.theme === "dark" ? "☼" : "◐"}</button>
               <button className="button button-small button-dark" type="button" onClick={() => changeView("checkin")}><span aria-hidden="true">＋</span> Log check-in</button>
             </div>
