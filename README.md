@@ -47,9 +47,9 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-The example environment uses `STACKBRIDGE_MODE=local`. Local mode deliberately does not load Clerk, run Clerk middleware, or connect to Neon. Progress is saved in the browser for the local user, with the dashboard’s backup/export controls available for portability.
+The example environment uses `STACKBRIDGE_MODE=local`. Local mode deliberately does not initialize Clerk, run Clerk middleware, or connect to Neon. Progress is saved in the browser for the local user, with the dashboard’s backup/export controls available for portability.
 
-The optional `run-dashboard.command` launcher resolves its own repository directory and opens the same development server on macOS. Set `STACKBRIDGE_PORT` if you want a different local port; the regular npm commands work on every supported development platform.
+The optional [`local/run-dashboard.command`](./local/run-dashboard.command) launcher resolves the repository root and opens the same development server on macOS. Set `STACKBRIDGE_PORT` if you want a different local port; the regular npm commands work on every supported development platform.
 
 Useful checks:
 
@@ -64,6 +64,16 @@ Clerk is only needed for hosted mode. If you are working on the hosted integrati
 ```bash
 clerk doctor
 ```
+
+## Repository layout
+
+- `app/` and `lib/` — the current Next.js application and its server services.
+- `styles/` — the shared dashboard stylesheet used by the current and legacy interfaces.
+- `public/` — assets served by the PWA; image assets live under `public/images/`, while `manifest.json` and `sw.js` stay at the public root for stable web-app URLs.
+- `local/` — optional local-development launchers.
+- `legacy/` — the older static/Python fallback, kept for local use and excluded from Vercel deployments.
+- `db/` — manually applicable database schema reference.
+- `docs/adr/` — architecture decision records.
 
 ## Hosted deployment: Vercel + Clerk + Neon
 
@@ -83,7 +93,7 @@ Set these environment variables in Vercel for Preview and Production:
 - `STACKBRIDGE_ADMIN_EMAIL` — required; the Clerk email that owns the access queue.
 - `RESEND_API_KEY` and `ACCESS_REQUEST_FROM_EMAIL` — optional; enable email notifications for new access requests.
 
-The first authenticated request creates or upgrades the application tables and seeds the default `gcp-to-aws-data-engineer` path. `schema.sql` contains the same DDL if you prefer to apply it manually. Each user’s progress is isolated by `(user_id, path_key)`.
+The first authenticated request creates or upgrades the application tables and seeds the default `gcp-to-aws-data-engineer` path. [`db/schema.sql`](./db/schema.sql) contains the same DDL if you prefer to apply it manually. Each user’s progress is isolated by `(user_id, path_key)`.
 
 ### Access control
 
@@ -120,6 +130,12 @@ StackBridge is public under the [MIT License](./LICENSE). Start with the [contri
 
 ## Legacy local fallback
 
-The original static dashboard files and `server.py` remain in the repository as a fallback for the older file-backed experience. The primary launcher and deployment path are now the Next.js app described above. The legacy fallback keeps browser `localStorage` and can still write `progress.json`; it is not the hosted database path.
+The original static dashboard files and Python file-backed server live under [`legacy/`](./legacy/) as a fallback. The primary launcher and deployment path are now the Next.js app described above. To run the fallback from the repository root:
+
+```bash
+python3 legacy/server.py --port 8765
+```
+
+Then open [http://127.0.0.1:8765/legacy/](http://127.0.0.1:8765/legacy/). It keeps browser `localStorage` and can write `legacy/progress.json`; it is not the hosted database path.
 
 Do not enter AWS access keys, MFA codes, secret values, or private tokens into the dashboard. Use a private deployment and keep `.env.local` out of version control.

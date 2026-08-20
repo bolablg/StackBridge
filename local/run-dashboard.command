@@ -2,7 +2,8 @@
 
 set -e
 
-APP_DIR="$(cd "$(dirname "$0")" && pwd)"
+LOCAL_DIR="$(cd "$(dirname "$0")" && pwd)"
+APP_DIR="$(cd "$LOCAL_DIR/.." && pwd)"
 PORT="${STACKBRIDGE_PORT:-${AWS_DEA_DASHBOARD_PORT:-3000}}"
 URL="http://127.0.0.1:${PORT}/"
 

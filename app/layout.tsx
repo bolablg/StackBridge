@@ -9,8 +9,8 @@ export const metadata: Metadata = {
   description: "Carry your data and AI expertise across cloud platforms.",
   manifest: "/manifest.json",
   icons: {
-    icon: "/favicon.svg",
-    apple: "/icon-192.png",
+    icon: "/images/favicon.svg",
+    apple: "/images/icon-192.png",
   },
 };
 
