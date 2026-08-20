@@ -18,7 +18,11 @@ const appearance = {
   },
   elements: {
     rootBox: "clerk-auth-root",
+    cardBox: "clerk-auth-card-box",
     card: "clerk-auth-component-card",
+    main: "clerk-auth-main",
+    form: "clerk-auth-form",
+    socialButtons: "clerk-auth-social-buttons",
     header: "clerk-auth-hide",
     headerTitle: "clerk-auth-hide",
     headerSubtitle: "clerk-auth-hide",

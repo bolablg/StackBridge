@@ -507,10 +507,7 @@
    one focused form, generous whitespace, and StackBridge context kept small. */
 .auth-page-gate {
   padding: 40px 24px 48px;
-  background:
-    radial-gradient(circle at 12% 8%, rgba(104, 138, 125, 0.1), transparent 23rem),
-    radial-gradient(circle at 88% 92%, rgba(181, 154, 98, 0.09), transparent 26rem),
-    var(--paper);
+  background: #f1f2ee;
 }
 
 .auth-minimal {
@@ -523,13 +520,25 @@
 .auth-minimal .clerk-auth-provider,
 .auth-minimal .clerk-auth-provider > *,
 .auth-minimal .clerk-auth-root,
-.auth-minimal .clerk-auth-component-card {
+.auth-minimal .clerk-auth-card-box,
+.auth-minimal .clerk-auth-component-card,
+.auth-minimal .clerk-auth-main,
+.auth-minimal .clerk-auth-form,
+.auth-minimal .cl-cardBox,
+.auth-minimal .cl-card,
+.auth-minimal .cl-rootBox,
+.auth-minimal .cl-main,
+.auth-minimal .cl-form {
   background: transparent !important;
   border: 0 !important;
+  border-radius: 0 !important;
   box-shadow: none !important;
 }
 
-.auth-minimal .clerk-auth-component-card {
+.auth-minimal .clerk-auth-card-box,
+.auth-minimal .clerk-auth-component-card,
+.auth-minimal .cl-cardBox,
+.auth-minimal .cl-card {
   padding: 0 !important;
   overflow: visible !important;
 }
@@ -555,6 +564,15 @@
   width: 100%;
   max-width: none;
   margin-top: 29px;
+}
+
+.auth-minimal .clerk-auth-input,
+.auth-minimal .clerk-auth-social {
+  background: transparent !important;
+}
+
+.auth-minimal .clerk-auth-primary {
+  box-shadow: none !important;
 }
 
 .auth-minimal .auth-switch {
