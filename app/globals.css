@@ -518,6 +518,22 @@
   margin: auto;
 }
 
+/* Clerk is part of this composition, not a second panel inside it. */
+.auth-minimal,
+.auth-minimal .clerk-auth-provider,
+.auth-minimal .clerk-auth-provider > *,
+.auth-minimal .clerk-auth-root,
+.auth-minimal .clerk-auth-component-card {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.auth-minimal .clerk-auth-component-card {
+  padding: 0 !important;
+  overflow: visible !important;
+}
+
 .auth-minimal h2 {
   margin: 25px 0 10px;
   color: var(--ink);
