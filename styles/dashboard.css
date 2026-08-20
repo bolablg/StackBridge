@@ -2471,6 +2471,39 @@ body[data-theme="dark"] .dataform-panel .dataform-pair strong {
   }
 }
 
+/* Keep the desktop navigation rail anchored while the content pane scrolls. */
+@media (min-width: 901px) {
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .app-shell {
+    height: 100vh;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+
+  .sidebar {
+    align-self: start;
+    height: 100vh;
+    max-height: 100vh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    position: sticky;
+    top: 0;
+  }
+
+  .main-content {
+    height: 100vh;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
 /* Clerk sits inside the same paper-and-ink access panel as the rest of the dossier. */
 .clerk-auth {
   min-height: 220px;
