@@ -1,8 +1,18 @@
-# StackBridge — Data Engineering: GCP → AWS
+# StackBridge — Carry expertise across cloud platforms
 
-StackBridge helps certified practitioners carry their data and AI expertise across platforms. Version one is the GCP → AWS Data Engineering path: a Google Cloud Professional Data Engineer translating existing skills into AWS and preparing for the AWS Certified Data Engineer — Associate exam.
+> Carry your data and AI expertise across cloud platforms.
 
-The product is built to grow into paths such as AWS → Azure, Snowflake → Databricks, cloud architecture, and ML engineering without changing the core user, path, or progress model.
+StackBridge is a private learning and accountability workspace for people who already have real expertise in one platform and want to transfer it to another. The role is the constant; the platform is the bridge.
+
+The path library is organized by professional profile and source platform. A learner can start with data engineering, machine learning engineering, or cloud architecture, choose the environment they already know, and see the destination bridges available for that profile.
+
+Version one has one live route: a Google Cloud Professional Data Engineer moving into AWS and preparing for the AWS Certified Data Engineer — Associate exam. The other role and platform combinations remain visible as coming-soon routes so the product can grow without changing its core user, path, or progress model.
+
+## Path library
+
+- **Data engineering** — GCP → AWS is live; GCP → Azure, Snowflake, and Databricks are coming soon.
+- **Machine learning engineering** — role and platform bridges are coming soon.
+- **Cloud architecture** — role and platform bridges are coming soon.
 
 ## What is included
 
@@ -48,6 +58,8 @@ clerk doctor
 
 Use this folder as the Vercel project root. Vercel will detect the Next.js build and use the scripts in `package.json`.
 
+The production website is [stackbridge.bolablg.com](https://stackbridge.bolablg.com). The Vercel fallback domain is [bolablg-stackbridge.vercel.app](https://bolablg-stackbridge.vercel.app); the shorter `stackbridge.vercel.app` name is already assigned to another Vercel project.
+
 Set these environment variables in Vercel for Preview and Production:
 
 - `DATABASE_URL` — supplied by a Neon Postgres integration.
@@ -78,14 +90,15 @@ The PWA shell can reopen without a network. Database synchronization requires co
 
 ## Branch workflow
 
-- `dev-bola` — active development and feature work.
+- `dev-*` — active development and feature work. The current branch is `dev-bola`.
 - `staging` — pre-production validation and deployment previews.
 - `main` — production deployment branch.
 
 ### CI/CD promotion flow
 
-- Every push to `dev-bola` runs the GitHub Actions `quality` check (`npm ci`, lint, and build) and creates a Vercel preview.
-- A pull request from `dev-bola` into `staging` runs the same quality check and receives a Vercel pull-request preview. Merging it updates the staging branch deployment.
+- Every push to a `dev-*` branch runs the GitHub Actions `quality` check (`npm ci`, lint, and build) and creates a Vercel preview.
+- After that quality check passes, GitHub Actions automatically opens or reuses a draft pull request from the development branch into `staging`. The automation never merges the pull request; a maintainer reviews it, marks it ready, and merges it when appropriate.
+- A pull request from a `dev-*` branch into `staging` runs the same quality check and receives a Vercel pull-request preview. Merging it updates the staging branch deployment.
 - A pull request from `staging` into `main` must pass both `quality` and the Vercel check. Merging it is the only production release path because `main` is protected.
 - `staging` and `main` reject direct pushes, force pushes, and unresolved review conversations. They currently require a pull request and passing checks; review approval can be increased later if the project gains additional maintainers.
 

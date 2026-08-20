@@ -3,7 +3,7 @@ name: CI
 on:
   push:
     branches:
-      - dev-bola
+      - 'dev-*'
       - staging
       - main
   pull_request:
@@ -13,6 +13,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -44,3 +45,49 @@ jobs:
         run: npm run build
         env:
           NEXT_TELEMETRY_DISABLED: 1
+
+  open-staging-pr:
+    name: open staging PR
+    if: github.event_name == 'push' && startsWith(github.ref_name, 'dev-')
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Create or reuse the staging pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH_NAME: ${{ github.ref_name }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          existing_pr=$(gh pr list \
+            --repo "$REPOSITORY" \
+            --head "$BRANCH_NAME" \
+            --base staging \
+            --state open \
+            --json number \
+            --jq '.[0].number // empty')
+
+          if [ -n "$existing_pr" ]; then
+            echo "Reusing open PR #$existing_pr for $BRANCH_NAME → staging."
+            exit 0
+          fi
+
+          ahead_by=$(gh api \
+            "repos/$REPOSITORY/compare/staging...$BRANCH_NAME" \
+            --jq '.ahead_by')
+
+          if [ "$ahead_by" -eq 0 ]; then
+            echo "$BRANCH_NAME has no commits ahead of staging; no PR needed."
+            exit 0
+          fi
+
+          gh pr create \
+            --repo "$REPOSITORY" \
+            --base staging \
+            --head "$BRANCH_NAME" \
+            --draft \
+            --title "promote: $BRANCH_NAME → staging" \
+            --body "Automated staging promotion: $BRANCH_NAME passed quality. Review the diff and mark this draft ready before merging."
