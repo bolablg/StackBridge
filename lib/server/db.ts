@@ -80,6 +80,42 @@ export async function ensureSchema(sql: Sql) {
               ON DELETE CASCADE
           )
         `,
+        () => sql`
+          CREATE TABLE IF NOT EXISTS access_grants (
+            path_key TEXT NOT NULL REFERENCES learning_paths(path_key) ON DELETE CASCADE,
+            clerk_user_id TEXT NOT NULL,
+            email TEXT NOT NULL,
+            granted_by TEXT NOT NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            PRIMARY KEY (path_key, clerk_user_id)
+          )
+        `,
+        () => sql`
+          CREATE UNIQUE INDEX IF NOT EXISTS access_grants_email_idx
+          ON access_grants (path_key, LOWER(email))
+        `,
+        () => sql`
+          CREATE TABLE IF NOT EXISTS access_requests (
+            id TEXT PRIMARY KEY,
+            path_key TEXT NOT NULL REFERENCES learning_paths(path_key) ON DELETE CASCADE,
+            clerk_user_id TEXT NOT NULL,
+            email TEXT NOT NULL,
+            display_name TEXT NOT NULL,
+            message TEXT,
+            status TEXT NOT NULL DEFAULT 'pending'
+              CHECK (status IN ('pending', 'approved', 'denied')),
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            reviewed_at TIMESTAMPTZ,
+            reviewed_by TEXT
+          )
+        `,
+        () => sql`
+          CREATE UNIQUE INDEX IF NOT EXISTS access_requests_pending_idx
+          ON access_requests (path_key, clerk_user_id)
+          WHERE status = 'pending'
+        `,
       ];
 
       for (const statement of statements) await statement();

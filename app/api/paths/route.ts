@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getAccessDecision } from "../../../lib/server/access";
 import { getAppSession, hostedAuthConfigured } from "../../../lib/server/auth";
 import { ensureSchema } from "../../../lib/server/db";
 import { publicPath, type PathRow } from "../../../lib/server/paths";
@@ -17,6 +18,8 @@ export async function GET() {
   try {
     const session = await getAppSession();
     if (!session) return authError();
+    const access = await getAccessDecision(session.user, session.sql);
+    if (access.status !== "allowed") return NextResponse.json({ error: "Access approval required." }, { status: 403 });
     await ensureSchema(session.sql);
     const rows = await session.sql`
       SELECT p.path_key, p.title, p.source_platform, p.target_platform, p.focus, p.definition, e.status AS enrollment_status
@@ -36,6 +39,8 @@ export async function POST(request: Request) {
   try {
     const session = await getAppSession();
     if (!session) return authError();
+    const access = await getAccessDecision(session.user, session.sql);
+    if (access.status !== "allowed") return NextResponse.json({ error: "Access approval required." }, { status: 403 });
     const body = await request.json() as { pathKey?: string };
     const pathKey = typeof body.pathKey === "string" ? body.pathKey.trim() : "";
     if (!pathKey) return NextResponse.json({ error: "pathKey is required." }, { status: 400 });
