@@ -1,4 +1,5 @@
 @import "../styles/dashboard.css";
+@import "../styles/responsive-navigation.css";
 
 .app-loading {
   min-height: 100vh;
