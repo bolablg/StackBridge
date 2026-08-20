@@ -1,5 +1,6 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { ensureSchema, getSql } from "./db";
+import { isLocalMode } from "./config";
 
 export type PublicUser = { id: string; email: string; displayName: string };
 type AppUserRow = { id: string; email: string; display_name: string };
@@ -11,7 +12,12 @@ export type AppSession = {
 };
 
 function isHostedAuthConfigured() {
-  return Boolean(process.env.DATABASE_URL && process.env.CLERK_SECRET_KEY && process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
+  return !isLocalMode() && Boolean(
+    process.env.DATABASE_URL
+      && process.env.CLERK_SECRET_KEY
+      && process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+      && process.env.STACKBRIDGE_ADMIN_EMAIL,
+  );
 }
 
 export function hostedAuthConfigured() {

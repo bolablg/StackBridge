@@ -1,7 +1,7 @@
 import { DEFAULT_PATH_KEY, ensureSchema, getSql, type Sql } from "./db";
 import type { PublicUser } from "./auth";
 
-export const DEFAULT_ADMIN_EMAIL = "bolajibalogoun@gmail.com";
+export const DEFAULT_ADMIN_EMAIL = "admin@example.com";
 
 export type AccessRequestStatus = "pending" | "approved" | "denied";
 export type AccessStatus = "allowed" | "pending" | "denied" | "not_requested";
