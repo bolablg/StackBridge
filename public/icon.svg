@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#243532"/>
+  <rect x="88" y="88" width="336" height="336" rx="34" fill="#d9b56b"/>
+  <text x="256" y="314" text-anchor="middle" fill="#243532" font-family="Georgia, 'Times New Roman', serif" font-size="142" font-weight="700" letter-spacing="-10">SB</text>
+  <path d="M366 88h58v58h-58z" fill="#bd7464"/>
+</svg>

@@ -1,0 +1,9 @@
+progress.json
+server.py
+run-dashboard.command
+__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example
+node_modules/

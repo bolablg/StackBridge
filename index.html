@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#2d3b3c" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="StackBridge" />
+    <meta
+      name="description"
+      content="StackBridge carries data and AI expertise across platforms. Current path: GCP to AWS Data Engineering."
+    />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./icon-192.png" />
+    <link rel="manifest" href="./manifest.json" />
+    <title>StackBridge — GCP → AWS Data Engineering</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Learning dashboard navigation">
+        <div class="brand-lockup">
+          <div class="brand-mark" aria-hidden="true">SB</div>
+          <div>
+            <div class="brand-title">STACKBRIDGE</div>
+            <div class="brand-subtitle">cross-platform / 01</div>
+          </div>
+        </div>
+
+        <div class="sidebar-stamp" aria-label="Learning path direction">
+          <span>GCP</span><span class="stamp-arrow">→</span><span>AWS</span>
+        </div>
+
+        <nav class="primary-nav" aria-label="Primary">
+          <button class="nav-item is-active" type="button" data-view-target="overview" aria-current="page">
+            <span class="nav-icon" aria-hidden="true">⌂</span>
+            <span><strong>Overview</strong><small>your runway</small></span>
+          </button>
+          <button class="nav-item" type="button" data-view-target="roadmap">
+            <span class="nav-icon" aria-hidden="true">↗</span>
+            <span><strong>Roadmap</strong><small>weeks 00—12</small></span>
+          </button>
+          <button class="nav-item" type="button" data-view-target="diagnostic">
+            <span class="nav-icon" aria-hidden="true">?</span>
+            <span><strong>Diagnostic</strong><small>baseline signal</small></span>
+          </button>
+          <button class="nav-item" type="button" data-view-target="checkin">
+            <span class="nav-icon" aria-hidden="true">＋</span>
+            <span><strong>Check-in</strong><small>capture the work</small></span>
+          </button>
+          <button class="nav-item" type="button" data-view-target="library">
+            <span class="nav-icon" aria-hidden="true">▤</span>
+            <span><strong>Library</strong><small>guides &amp; links</small></span>
+          </button>
+        </nav>
+
+        <div class="sidebar-bottom">
+          <div class="local-status"><span id="file-sync-dot" class="status-dot"></span> <span id="file-sync-status">sync checking</span></div>
+          <p>Your progress stays private. The local launcher writes a file; the hosted version writes to your protected database.</p>
+          <div class="sidebar-tools">
+            <button class="text-button" type="button" data-action="save-file">Save progress file</button>
+            <button class="text-button" type="button" data-action="import">Import</button>
+            <button class="text-button text-button-danger" type="button" data-action="reset">Reset</button>
+          </div>
+        </div>
+      </aside>
+
+      <main id="main-content" class="main-content">
+        <header class="topbar">
+          <div class="topbar-context">
+            <span class="live-dot" aria-hidden="true"></span>
+            <span id="topbar-label">StackBridge / GCP → AWS</span>
+          </div>
+          <div class="topbar-actions">
+            <span id="network-status" class="network-status"><span class="network-dot"></span> ready</span>
+            <span id="save-state" class="save-state">saved locally</span>
+            <div id="user-identity" class="user-identity" hidden>
+              <span id="user-label" class="user-label"></span>
+              <button class="text-button text-button-main" type="button" data-action="logout">Sign out</button>
+            </div>
+            <button id="theme-toggle" class="icon-button" type="button" aria-label="Switch to dim theme" title="Switch theme">◐</button>
+            <button id="install-button" class="button button-small button-quiet install-button" type="button" hidden>Install app</button>
+            <button class="button button-small button-dark" type="button" data-view-target="checkin">
+              <span aria-hidden="true">＋</span> Log check-in
+            </button>
+          </div>
+        </header>
+
+        <section class="view is-visible" data-view-panel="overview" aria-labelledby="overview-title">
+          <div class="hero-grid">
+            <div class="hero-copy reveal reveal-one">
+              <div class="eyebrow"><span class="eyebrow-line"></span> StackBridge / DEA-C01</div>
+              <h1 id="overview-title">Carry your data-engineering judgment <em>across clouds.</em></h1>
+              <p class="hero-lede">
+                A working plan for a Google Cloud Professional Data Engineer moving into AWS. Keep the engineering judgment;
+                learn where AWS draws different service boundaries.
+              </p>
+              <div class="hero-actions">
+                <button class="button button-primary" type="button" data-view-target="roadmap">View study sequence <span aria-hidden="true">↗</span></button>
+                <button class="button button-quiet" type="button" data-view-target="diagnostic">Take baseline</button>
+              </div>
+              <div class="proof-strip" aria-label="Certification target facts">
+                <div><span>target</span><strong>DEA-C01</strong></div>
+                <div><span>pace</span><strong>6–8 hrs / week</strong></div>
+                <div><span>method</span><strong>build → explain → verify</strong></div>
+              </div>
+            </div>
+
+            <div class="progress-card reveal reveal-two">
+              <div class="progress-card-head">
+                <span class="eyebrow">completion</span>
+                <span class="progress-label" id="progress-label">0 / 13 verified</span>
+              </div>
+              <div class="progress-orbit" id="progress-orbit" style="--progress: 0deg" role="img" aria-label="0 percent of weeks verified">
+                <div class="progress-orbit-inner">
+                  <strong id="progress-percent">0%</strong>
+                  <span>weeks verified</span>
+                </div>
+              </div>
+              <div class="progress-card-foot">
+                <span class="mini-rule"></span>
+                <span id="progress-note">Start with the safety gate.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="metric-row reveal reveal-three" aria-label="Progress summary">
+            <article class="metric-card metric-card-accent">
+              <span class="metric-label">current week</span>
+              <strong id="metric-current-week">W00</strong>
+              <span id="metric-current-title">Account &amp; safety</span>
+            </article>
+            <article class="metric-card">
+              <span class="metric-label">verified weeks</span>
+              <strong id="metric-verified">0</strong>
+              <span>of 13 milestones</span>
+            </article>
+            <article class="metric-card">
+              <span class="metric-label">practice signal</span>
+              <strong id="metric-diagnostic">—</strong>
+              <span id="metric-diagnostic-note">baseline not taken</span>
+            </article>
+            <article class="metric-card metric-card-note">
+              <span class="metric-label">next check-in</span>
+              <strong id="metric-checkin-day">not set</strong>
+              <span>choose a rhythm in Check-in</span>
+            </article>
+          </div>
+
+          <div class="dashboard-grid">
+            <section class="panel safety-panel reveal reveal-one" aria-labelledby="safety-title">
+              <div class="panel-kicker"><span class="kicker-number">00</span> before the first lab</div>
+              <div class="panel-heading-row">
+                <div>
+                  <h2 id="safety-title">Safety gate</h2>
+                  <p>Give yourself a cheap, controlled sandbox before you touch a warehouse.</p>
+                </div>
+                <span id="setup-badge" class="status-pill status-not-started">not ready</span>
+              </div>
+              <div class="gate-fields">
+                <label class="field-label">Learning Region
+                  <input id="setup-region" type="text" placeholder="e.g. us-east-1" autocomplete="off" />
+                </label>
+                <label class="field-label">Account plan
+                  <select id="setup-plan">
+                    <option value="">Choose one</option>
+                    <option value="free">Free account plan</option>
+                    <option value="legacy">Legacy / existing account</option>
+                    <option value="paid">Paid plan</option>
+                    <option value="unknown">Unknown — resolve first</option>
+                  </select>
+                </label>
+                <label class="field-label">Free Plan / credit expiry
+                  <input id="setup-expiry" type="date" />
+                </label>
+              </div>
+              <div class="gate-checklist" role="group" aria-label="Safety checklist">
+                <label class="check-row"><input type="checkbox" data-setup-check="rootMfa" /><span class="check-box" aria-hidden="true"></span><span>Root MFA is on; no root access keys</span></label>
+                <label class="check-row"><input type="checkbox" data-setup-check="nonRoot" /><span class="check-box" aria-hidden="true"></span><span>Non-root identity / approved session is ready</span></label>
+                <label class="check-row"><input type="checkbox" data-setup-check="budget" /><span class="check-box" aria-hidden="true"></span><span>Small budget and actual/forecast alerts are active</span></label>
+                <label class="check-row"><input type="checkbox" data-setup-check="noOrg" /><span class="check-box" aria-hidden="true"></span><span>No Organizations or Control Tower in this sandbox</span></label>
+              </div>
+              <div class="panel-footer safety-footer">
+                <span id="setup-progress-note">0 / 4 guardrails checked</span>
+                <button class="button button-outline button-small" type="button" data-view-target="library">Open Week 0 guide <span aria-hidden="true">↗</span></button>
+              </div>
+            </section>
+
+            <section class="panel next-panel reveal reveal-two" aria-labelledby="next-title">
+              <div class="panel-kicker"><span class="kicker-number">NEXT</span> your next move</div>
+              <div id="next-week-content">
+                <div class="next-index" id="next-week-number">W00</div>
+                <h2 id="next-title">Account &amp; safety</h2>
+                <p id="next-week-summary">Secure the learning account, pick a Region, and establish cost guardrails.</p>
+                <div class="next-deliverable">
+                  <span>field test</span>
+                  <strong id="next-week-deliverable">Verified Week 0 stop-point</strong>
+                </div>
+                <button class="button button-dark button-full" type="button" id="next-action" data-view-target="roadmap">Open this week <span aria-hidden="true">→</span></button>
+              </div>
+            </section>
+          </div>
+
+          <section class="section-block reveal reveal-three" aria-labelledby="translation-title">
+            <div class="section-heading">
+              <div>
+                <div class="panel-kicker"><span class="kicker-number">MAP</span> familiar ideas, new edges</div>
+                <h2 id="translation-title">Your GCP → AWS translation desk</h2>
+              </div>
+              <p>Carry the concept. Relearn the service boundary.</p>
+            </div>
+            <div id="stack-map" class="translation-grid"></div>
+          </section>
+
+          <section class="quote-panel reveal reveal-one" aria-label="Learning principle">
+            <div class="quote-mark" aria-hidden="true">“</div>
+            <p>Do not memorize a menu of services. Build the smallest pipeline that makes the tradeoff impossible to ignore.</p>
+            <span>— the field rule</span>
+          </section>
+        </section>
+
+        <section class="view" data-view-panel="roadmap" aria-labelledby="roadmap-title" hidden>
+          <div class="page-intro">
+            <div>
+              <div class="eyebrow"><span class="eyebrow-line"></span> sequence / 13 milestones</div>
+              <h1 id="roadmap-title">The runway</h1>
+              <p>Each week has one practical center of gravity. Reading is preparation; evidence is progress.</p>
+            </div>
+            <div class="page-intro-aside"><span class="big-annotation">01 → 12</span><span>from account safety<br />to readiness decision</span></div>
+          </div>
+          <div class="roadmap-toolbar">
+            <div class="legend" aria-label="Status legend">
+              <span><i class="legend-dot dot-not-started"></i> not started</span>
+              <span><i class="legend-dot dot-studying"></i> studying</span>
+              <span><i class="legend-dot dot-practiced"></i> practiced</span>
+              <span><i class="legend-dot dot-verified"></i> verified</span>
+              <span><i class="legend-dot dot-revisit"></i> revisit</span>
+            </div>
+            <label class="filter-label">Show
+              <select id="week-filter">
+                <option value="all">all weeks</option>
+                <option value="not-started">not started</option>
+                <option value="studying">studying</option>
+                <option value="practiced">practiced</option>
+                <option value="verified">verified</option>
+                <option value="revisit">revisit</option>
+              </select>
+            </label>
+          </div>
+          <div id="week-grid" class="week-grid"></div>
+        </section>
+
+        <section class="view" data-view-panel="diagnostic" aria-labelledby="diagnostic-title" hidden>
+          <div class="page-intro page-intro-tight">
+            <div>
+              <div class="eyebrow"><span class="eyebrow-line"></span> signal / 16 questions</div>
+              <h1 id="diagnostic-title">Find the first gap.</h1>
+              <p>This is an original baseline, not an AWS practice exam. Take it without notes, then let the error pattern choose your first lab.</p>
+            </div>
+            <div class="caution-note"><span class="caution-icon">!</span><span>Baseline only.<br />Not readiness.</span></div>
+          </div>
+          <div class="diagnostic-layout">
+            <form id="diagnostic-form" class="panel diagnostic-form" novalidate></form>
+            <aside class="panel diagnostic-side">
+              <div class="panel-kicker"><span class="kicker-number">HOW</span> use the signal</div>
+              <h2>Do the honest first pass.</h2>
+              <ol class="numbered-list">
+                <li><span>01</span><p>Answer before opening the guide or browser.</p></li>
+                <li><span>02</span><p>Record the questions you guessed, not only the ones you missed.</p></li>
+                <li><span>03</span><p>Use the weakest domain to choose the next lab emphasis.</p></li>
+              </ol>
+              <div class="diagnostic-history" id="diagnostic-history"></div>
+            </aside>
+          </div>
+        </section>
+
+        <section class="view" data-view-panel="checkin" aria-labelledby="checkin-title" hidden>
+          <div class="page-intro page-intro-tight">
+            <div>
+              <div class="eyebrow"><span class="eyebrow-line"></span> accountability / evidence log</div>
+              <h1 id="checkin-title">Make the work visible.</h1>
+              <p>Log what you actually did, what broke, and what you will do next. Do not paste credentials or secret values.</p>
+            </div>
+            <div class="checkin-signal"><span class="signal-ring"></span><span id="checkin-count">0 check-ins</span></div>
+          </div>
+          <div class="checkin-layout">
+            <form id="checkin-form" class="panel checkin-form" novalidate>
+              <div class="form-section-heading"><span>01</span><h2>Session details</h2></div>
+              <div class="form-grid form-grid-three">
+                <label class="field-label">Week
+                  <select id="checkin-week" name="week"></select>
+                </label>
+                <label class="field-label">Dates covered
+                  <input id="checkin-dates" name="dates" type="text" placeholder="e.g. Aug 19–25" />
+                </label>
+                <label class="field-label">Hours studied
+                  <input id="checkin-hours" name="hours" type="number" min="0" max="100" step="0.5" placeholder="6" />
+                </label>
+              </div>
+              <div class="form-grid form-grid-two">
+                <label class="field-label">AWS Region / account status
+                  <input id="checkin-account" name="account" type="text" placeholder="e.g. us-east-1 / non-root ready" />
+                </label>
+                <label class="field-label">Preferred weekly check-in day/time
+                  <input id="checkin-rhythm" name="rhythm" type="text" placeholder="e.g. Wednesday, 7pm" />
+                </label>
+              </div>
+              <div class="form-section-heading form-section-heading-spaced"><span>02</span><h2>Evidence, not intention</h2></div>
+              <label class="field-label">Learning / lab completed
+                <textarea id="checkin-learning" name="learning" rows="3" placeholder="What did you build, run, or explain?"></textarea>
+              </label>
+              <label class="field-label">Evidence location
+                <input id="checkin-evidence" name="evidence" type="text" placeholder="Local file, screenshot name, command output, or 'no-account mapping'" />
+              </label>
+              <div class="form-grid form-grid-two">
+                <label class="field-label">Quiz / practice score by domain
+                  <input id="checkin-score" name="score" type="text" placeholder="e.g. D1 3/4, D2 2/4" />
+                </label>
+                <label class="field-label">Confidence (1–5)
+                  <select id="checkin-confidence" name="confidence">
+                    <option value="">Choose one</option><option value="1">1 — foggy</option><option value="2">2 — emerging</option><option value="3">3 — workable</option><option value="4">4 — solid</option><option value="5">5 — teach it</option>
+                  </select>
+                </label>
+              </div>
+              <label class="field-label">What broke or felt unclear?
+                <textarea id="checkin-unclear" name="unclear" rows="3" placeholder="Permission error, partition surprise, cost concern, or concept gap"></textarea>
+              </label>
+              <label class="field-label">Next commitment (specific and time-bounded)
+                <textarea id="checkin-next" name="next" rows="2" placeholder="By Sunday: run the Week 1 S3 lab and save teardown evidence"></textarea>
+              </label>
+              <div class="form-actions">
+                <button class="button button-primary" type="submit">Save check-in <span aria-hidden="true">↗</span></button>
+                <span class="form-hint">Saved locally first; hosted builds sync to the protected database.</span>
+              </div>
+            </form>
+            <aside class="panel checkin-history-panel">
+              <div class="panel-kicker"><span class="kicker-number">LOG</span> your trail</div>
+              <h2>Recent check-ins</h2>
+              <div id="checkin-history" class="checkin-history"></div>
+            </aside>
+          </div>
+        </section>
+
+        <section class="view" data-view-panel="library" aria-labelledby="library-title" hidden>
+          <div class="page-intro">
+            <div>
+              <div class="eyebrow"><span class="eyebrow-line"></span> reference desk / local links</div>
+              <h1 id="library-title">The library.</h1>
+              <p>Your existing guides stay in the project root. This dashboard is the cockpit; the Markdown files are the deep field notes.</p>
+            </div>
+            <div class="page-intro-aside"><span class="big-annotation">FIELD KIT</span><span>offline shell<br />optional cloud sync</span></div>
+          </div>
+          <div class="library-grid">
+            <section class="panel library-primary">
+              <div class="panel-kicker"><span class="kicker-number">CORE</span> start with these</div>
+              <div id="core-links" class="resource-list"></div>
+            </section>
+            <section class="panel library-secondary">
+              <div class="panel-kicker"><span class="kicker-number">AWS</span> official doors</div>
+              <div id="official-links" class="resource-list"></div>
+            </section>
+            <section class="panel dataform-panel">
+              <div class="panel-kicker"><span class="kicker-number">NOTE</span> Dataform → AWS</div>
+              <h2>Keep the modeling muscle.</h2>
+              <p>There is no exact one-service AWS Dataform clone. Use dbt with Redshift for SQL models, tests, docs, and DAG thinking; learn Glue for the AWS-native ingestion, catalog, ETL, and operations layer the exam expects.</p>
+              <div class="dataform-pair"><span>Dataform</span><span class="pair-arrow">→</span><strong>dbt + Redshift</strong></div>
+              <div class="dataform-pair"><span>Composer</span><span class="pair-arrow">→</span><strong>MWAA / Step Functions</strong></div>
+            </section>
+            <section class="panel rules-panel">
+              <div class="panel-kicker"><span class="kicker-number">RULES</span> keep the sandbox healthy</div>
+              <ul class="rules-list">
+                <li><span>01</span><p>Never put credentials, MFA codes, or secret values in this app or a check-in.</p></li>
+                <li><span>02</span><p>Do not mark a week verified until the artifact, evidence, reflection, and teardown exist.</p></li>
+                <li><span>03</span><p>Delete temporary AWS resources deliberately; budgets notify, but they do not block spend.</p></li>
+              </ul>
+            </section>
+          </div>
+        </section>
+
+        <footer class="app-footer">
+          <span>STACKBRIDGE</span><span>local-first · installable PWA</span><span>GCP → AWS · DATA ENGINEERING</span>
+        </footer>
+      </main>
+    </div>
+
+    <div id="auth-gate" class="auth-gate" hidden>
+      <div class="auth-card" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+        <div class="brand-mark auth-mark" aria-hidden="true">SB</div>
+        <div class="eyebrow"><span class="eyebrow-line"></span> private field guide</div>
+        <div class="auth-tabs" role="tablist" aria-label="Account access">
+          <button id="auth-login-tab" class="auth-tab is-active" type="button" role="tab" aria-selected="true" data-auth-mode="login">Sign in</button>
+          <button id="auth-register-tab" class="auth-tab" type="button" role="tab" aria-selected="false" data-auth-mode="register">Create account</button>
+        </div>
+        <h2 id="auth-title">Welcome back.</h2>
+        <p id="auth-copy">Sign in to load your private path and continue where you left off.</p>
+        <div id="clerk-auth" class="clerk-auth" aria-live="polite"></div>
+        <button class="button button-quiet button-full" type="button" data-action="use-local">Continue with local storage</button>
+        <p id="auth-message" class="auth-message" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <input id="import-file" type="file" accept="application/json" hidden />
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>

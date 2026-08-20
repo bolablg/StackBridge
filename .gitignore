@@ -1,0 +1,10 @@
+progress.json
+.env
+.env.*
+!.env.example
+.next/
+__pycache__/
+*.pyc
+*.tsbuildinfo
+.vercel/
+node_modules/
