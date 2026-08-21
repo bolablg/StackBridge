@@ -802,3 +802,14 @@ body {
     border-radius: 9px;
   }
 }
+
+/*
+ * Work-surface button geometry
+ *
+ * A 45px-high pill has an effective 22.5px corner radius. Halving that
+ * visible rounding gives the primary and secondary content actions an
+ * 11.25px radius while leaving the sidebar and authentication UI unchanged.
+ */
+.main-content .button {
+  border-radius: 11.25px;
+}
