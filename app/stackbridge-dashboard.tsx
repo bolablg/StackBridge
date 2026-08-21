@@ -280,7 +280,7 @@ function TextButton({ children, onClick, danger = false }: { children: ReactNode
   return <button className={`text-button${danger ? " text-button-danger" : ""}`} type="button" onClick={onClick}>{children}</button>;
 }
 
-type NavigationIconName = "home" | "paths" | "roadmap" | "diagnostic" | "checkin" | "library" | "exam" | "sun" | "moon";
+type NavigationIconName = "home" | "paths" | "roadmap" | "diagnostic" | "checkin" | "library" | "exam" | "admin" | "sun" | "moon";
 
 function NavigationIcon({ name }: { name: NavigationIconName }) {
   const paths: Record<NavigationIconName, ReactNode> = {
@@ -291,24 +291,35 @@ function NavigationIcon({ name }: { name: NavigationIconName }) {
     checkin: <><path d="M5 3.5h10l4 4V21H5z" /><path d="M15 3.5V8h4M8.5 13h7M8.5 17h5" /></>,
     library: <><path d="M4 5.5h5v14H4zM10.5 5.5h5v14h-5zM17 5.5h3v14h-3z" /></>,
     exam: <><path d="M6 3.5h12V21H6z" /><path d="M9 8h6M9 12h6M9 16h3" /><path d="m14 16 1.3 1.3L18 14.5" /></>,
+    admin: <><path d="M12 3 20 6v5.5c0 4.4-3 7.8-8 9.5-5-1.7-8-5.1-8-9.5V6z" /><path d="M9 12h6M12 9v6" /></>,
     sun: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></>,
     moon: <path d="M20.5 15.1A8.7 8.7 0 0 1 8.9 3.5 8.7 8.7 0 1 0 20.5 15.1Z" />,
   };
   return <svg aria-hidden="true" className="navigation-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6">{paths[name]}</svg>;
 }
 
-function ClerkHeaderActions({ isAdmin }: { isAdmin: boolean }) {
+function ClerkTopbarActions() {
   return (
-    <div className="clerk-header-actions">
-      {isAdmin && <Link className="text-button text-button-main" href="/admin/access-requests">Access requests</Link>}
-      <Show when="signed-out">
+    <Show when="signed-out">
+      <div className="clerk-header-actions">
         <Link className="text-button text-button-main" href="/sign-in">Sign in</Link>
         <Link className="button button-small button-dark" href="/sign-up">Create account</Link>
-      </Show>
-      <Show when="signed-in">
-        <UserButton appearance={{ elements: { avatarBox: "clerk-avatar" } }} />
-      </Show>
-    </div>
+      </div>
+    </Show>
+  );
+}
+
+function ClerkSidebarAccount({ displayName, syncLabel, syncStatus }: { displayName: string; syncLabel: string; syncStatus: string }) {
+  return (
+    <Show when="signed-in">
+      <div className="sidebar-account">
+        <UserButton appearance={{ elements: { avatarBox: "clerk-sidebar-avatar" } }} />
+        <div className="sidebar-account-copy">
+          <strong title={displayName}>{displayName}</strong>
+          <span title={syncLabel}><i className={`status-dot status-dot-${syncStatus}`} aria-hidden="true" /> {syncLabel}</span>
+        </div>
+      </div>
+    </Show>
   );
 }
 
@@ -737,7 +748,12 @@ function DashboardCore({ auth, isAdmin, pathKey: requestedPathKey }: { auth: Aut
               </nav>
             )}
             <div className="sidebar-bottom">
-              <div className="local-status" title={syncLabel}><span className={`status-dot status-dot-${syncStatus}`} /> <span>{syncLabel}</span></div>
+              {isAdmin && (
+                <Link className="sidebar-admin-link" href="/admin/access-requests" onClick={() => setMobileMenuOpen(false)}>
+                  <span className="nav-icon"><NavigationIcon name="admin" /></span>
+                  <strong>Administration</strong>
+                </Link>
+              )}
               <details className="sidebar-utilities">
                 <summary>Data &amp; backups <span aria-hidden="true">+</span></summary>
                 <div className="sidebar-tools">
@@ -746,6 +762,9 @@ function DashboardCore({ auth, isAdmin, pathKey: requestedPathKey }: { auth: Aut
                   <TextButton danger onClick={resetApp}>Reset this path</TextButton>
                 </div>
               </details>
+              {auth.clerkEnabled
+                ? <ClerkSidebarAccount displayName={auth.displayName} syncLabel={syncLabel} syncStatus={syncStatus} />
+                : <div className="local-status" title={syncLabel}><span className={`status-dot status-dot-${syncStatus}`} /> <span>{syncLabel}</span></div>}
             </div>
           </div>
           <button className="mobile-menu-backdrop" type="button" aria-label="Close navigation" tabIndex={-1} onClick={() => setMobileMenuOpen(false)} />
@@ -753,10 +772,15 @@ function DashboardCore({ auth, isAdmin, pathKey: requestedPathKey }: { auth: Aut
 
         <main id="main-content" className="main-content" inert={mobileMenuOpen || undefined}>
           <header className="topbar">
-            <div className="topbar-context"><span>{navigation.scope === "home" ? "Overview" : navigation.scope === "domain" ? "Data engineering" : `${blueprint.source.short} → ${blueprint.target.short}`}</span>{navigation.scope === "track" && <><i aria-hidden="true">/</i><strong>{VIEW_CONTEXT_LABELS[view]}</strong></>}</div>
+            <div className="topbar-context">
+              {navigation.scope === "domain"
+                ? <strong>Data engineering</strong>
+                : <span>{navigation.scope === "home" ? "Overview" : `${blueprint.source.short} → ${blueprint.target.short}`}</span>}
+              {navigation.scope === "track" && <><i aria-hidden="true">/</i><strong>{VIEW_CONTEXT_LABELS[view]}</strong></>}
+            </div>
             <div className="topbar-actions">
               {!online && <span className="network-status is-offline"><span className="network-dot" /> Offline · saving locally</span>}
-              {auth.clerkEnabled ? <ClerkHeaderActions isAdmin={isAdmin} /> : <span className="local-mode-label">local mode</span>}
+              {auth.clerkEnabled ? <ClerkTopbarActions /> : <span className="local-mode-label">local mode</span>}
               <button className="icon-button" type="button" onClick={toggleTheme} aria-label={`Switch to ${state.preferences.theme === "dark" ? "light" : "dark"} theme`} title={`Switch to ${state.preferences.theme === "dark" ? "light" : "dark"} theme`}><NavigationIcon name={state.preferences.theme === "dark" ? "sun" : "moon"} /></button>
               {navigation.scope === "track" && <button className="button button-small button-dark topbar-checkin" type="button" aria-label="Log a check-in" onClick={() => changeView("checkin")}><span aria-hidden="true">＋</span><span className="topbar-checkin-label">Log check-in</span></button>}
             </div>
@@ -787,13 +811,13 @@ function HomeOverviewView({ onOpenPath }: { onOpenPath: (pathKey?: string) => vo
           <div className="eyebrow"><span className="eyebrow-line" /> StackBridge / career overview</div>
           <h1>Make your next platform feel <em>like a continuation.</em></h1>
           <p className="hero-lede">StackBridge turns the expertise you already have into a deliberate path toward the roles, platforms, and credentials you want next. Choose a track, then open one focused bridge.</p>
-          <div className="hero-actions"><a className="button button-primary" href="#path-library">Explore transition paths <span aria-hidden="true">↘</span></a><Link className="button button-quiet" href={TRACK_PATH}>Open featured path</Link></div>
+          <div className="hero-actions"><a className="button button-primary" href="#path-library">Explore transition paths <span aria-hidden="true">↘</span></a><Link className="button button-quiet" href={TRACK_PATH}>Open original path</Link></div>
         </div>
         <div className="home-signal-card reveal reveal-two">
           <div className="home-signal-kicker">career graph / now</div>
           <div className="home-signal-title">Your role is the constant.</div>
           <p>Translate systems judgment, operating habits, and evidence across the boundary. The destination changes. The engineering muscle compounds.</p>
-          <div className="home-signal-route"><span>role</span><strong>Data Engineering</strong><span className="home-signal-arrow">→</span><span>featured bridge</span><strong>{featuredBlueprint.source.short} → {featuredBlueprint.target.short}</strong></div>
+          <div className="home-signal-route"><span>role</span><strong>Data Engineering</strong><span className="home-signal-arrow">→</span><span>first released bridge</span><strong>{featuredBlueprint.source.short} → {featuredBlueprint.target.short}</strong></div>
           <div className="home-signal-footer"><span className="live-dot" aria-hidden="true" /> {ACTIVE_PATH_COUNT} live paths, more on the way</div>
         </div>
       </div>
@@ -812,7 +836,7 @@ function DomainOverviewView({ onOpenPath }: { onOpenPath: (pathKey?: string) => 
     <section className="view is-visible domain-overview">
       <div className="page-intro domain-intro"><div><div className="eyebrow"><span className="eyebrow-line" /> career track / data engineering</div><h1>Choose the bridge<br /><em>that compounds.</em></h1><p>One role track, several platform transitions. Start with a route that respects what you already know, then build evidence in the destination system.</p></div><div className="page-intro-aside"><span className="big-annotation">{liveRoutes.length} LIVE</span><span>data engineering<br />path library<br />focused routes</span></div></div>
       <div className="domain-summary-grid">
-        <section className="panel domain-feature-card"><div className="panel-kicker"><span className="kicker-number">FEATURED</span> current bridge</div><div className="domain-feature-route"><strong>{blueprint.source.short}</strong><span>→</span><strong>{blueprint.target.short}</strong></div><h2>{blueprint.focus}</h2><p>{blueprint.summary}</p><div className="domain-feature-meta"><span><b>source</b> {blueprint.source.label}</span><span><b>destination</b> {blueprint.target.label}</span><span><b>status</b> ready to open</span></div><button className="button button-dark" type="button" onClick={() => onOpenPath(liveRoute?.pathKey)} >Open featured path <span aria-hidden="true">↗</span></button></section>
+        <section className="panel domain-feature-card"><div className="panel-kicker"><span className="kicker-number">FIRST RELEASE</span> original bridge</div><div className="domain-feature-route"><strong>{blueprint.source.short}</strong><span>→</span><strong>{blueprint.target.short}</strong></div><h2>{blueprint.focus}</h2><p>{blueprint.summary}</p><div className="domain-feature-meta"><span><b>source</b> {blueprint.source.label}</span><span><b>destination</b> {blueprint.target.label}</span><span><b>status</b> ready to open</span></div><button className="button button-dark" type="button" onClick={() => onOpenPath(liveRoute?.pathKey)} >Open original path <span aria-hidden="true">↗</span></button></section>
         <section className="panel domain-principles-card"><div className="panel-kicker"><span className="kicker-number">METHOD</span> how the path works</div><div className="domain-principle"><span>01</span><div><strong>Map the boundary</strong><p>See the service and operating-model translation before memorizing names.</p></div></div><div className="domain-principle"><span>02</span><div><strong>Practice the decision</strong><p>Use small labs to make reliability, cost, security, and recovery visible.</p></div></div><div className="domain-principle"><span>03</span><div><strong>Leave evidence</strong><p>Turn each week into a proof point you can explain in an interview.</p></div></div></section>
       </div>
       <div className="section-heading domain-coming-heading"><div><div className="panel-kicker"><span className="kicker-number">ROUTES</span> route library</div><h2>{liveRoutes.length} bridges are ready.</h2></div><p>Open any available route to get its own title, translation desk, roadmap, progress state, and four embedded simulations.</p></div>
