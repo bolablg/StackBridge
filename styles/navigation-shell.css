@@ -247,8 +247,33 @@
 }
 
 .sidebar-bottom {
+  display: grid;
   padding-top: 17px;
   border-top: 1px solid rgba(244, 240, 231, 0.12);
+}
+
+.sidebar-admin-link {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  min-height: 42px;
+  align-items: center;
+  gap: 11px;
+  padding: 8px 6px;
+  color: rgba(244, 240, 231, 0.76);
+  text-decoration: none;
+}
+
+.sidebar-admin-link:hover {
+  color: #f4f0e7;
+}
+
+.sidebar-admin-link strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.sidebar-admin-link + .sidebar-utilities {
+  margin-top: 3px;
 }
 
 .local-status {
@@ -317,6 +342,59 @@
   color: #f4f0e7;
 }
 
+.sidebar-account {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  min-height: 51px;
+  align-items: center;
+  gap: 10px;
+  margin-top: 9px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(244, 240, 231, 0.1);
+}
+
+.clerk-sidebar-avatar {
+  width: 32px !important;
+  height: 32px !important;
+}
+
+.sidebar-account-copy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.sidebar-account-copy strong {
+  overflow: hidden;
+  color: #f4f0e7;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-account-copy span {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  color: rgba(244, 240, 231, 0.58);
+  font-size: 9px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-account-copy .status-dot {
+  flex: 0 0 6px;
+}
+
+.sidebar-bottom > .local-status {
+  margin-top: 12px;
+}
+
 .topbar {
   min-height: 72px;
 }
@@ -361,6 +439,50 @@
 .icon-button .navigation-svg {
   width: 17px;
   height: 17px;
+}
+
+@media (min-width: 901px) and (max-height: 760px) {
+  .sidebar {
+    padding-top: 20px;
+    padding-bottom: 12px;
+  }
+
+  .sidebar-menu {
+    padding-top: 24px;
+  }
+
+  .sidebar-context {
+    margin-bottom: 18px;
+    padding-bottom: 16px;
+  }
+
+  .sidebar-context-back {
+    min-height: 28px;
+    margin-bottom: 7px;
+  }
+
+  .nav-item {
+    min-height: 42px;
+    padding-top: 7px;
+    padding-bottom: 7px;
+  }
+
+  .sidebar-bottom {
+    padding-top: 10px;
+  }
+
+  .sidebar-admin-link {
+    min-height: 38px;
+  }
+
+  .sidebar-utilities summary {
+    min-height: 34px;
+  }
+
+  .sidebar-account {
+    min-height: 47px;
+    padding-top: 10px;
+  }
 }
 
 @media (max-width: 900px) {
@@ -438,6 +560,16 @@
 
   .sidebar-tools .text-button {
     min-height: 42px;
+  }
+
+  .sidebar-admin-link {
+    min-height: 48px;
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+
+  .sidebar-account {
+    min-height: 58px;
   }
 }
 
