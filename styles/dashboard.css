@@ -2904,7 +2904,7 @@ body[data-theme="dark"] .dataform-panel .dataform-pair strong {
     color: var(--paper);
     background: rgba(247, 243, 235, 0.08);
     border: 1px solid rgba(247, 243, 235, 0.18);
-    border-radius: 7px;
+    border-radius: 3.5px;
     font-size: 9px;
     font-weight: 700;
     letter-spacing: 0.1em;
