@@ -810,3 +810,246 @@ body {
     border-radius: 9px;
   }
 }
+
+/*
+ * Contrast-safe accent surfaces
+ *
+ * Accent panels must own both their background and foreground tokens. The
+ * earlier editorial layer set the panel text to ink, while the visual layer
+ * later restored the teal/deep backgrounds; that combination was difficult
+ * to read without selecting the text.
+ */
+.dataform-panel,
+.rules-panel {
+  color: var(--deep-text);
+}
+
+.dataform-panel {
+  background: var(--teal);
+  border-color: rgba(247, 243, 235, 0.18);
+}
+
+.rules-panel {
+  background: var(--deep);
+  border-color: var(--deep);
+}
+
+.dataform-panel .panel-kicker,
+.rules-panel .panel-kicker {
+  color: rgba(247, 243, 235, 0.78);
+}
+
+.dataform-panel .kicker-number,
+.rules-panel .kicker-number,
+.dataform-panel .pair-arrow,
+.rules-panel .rules-list li > span {
+  color: var(--gold);
+}
+
+.dataform-panel h2,
+.rules-panel h2,
+.dataform-panel .dataform-pair strong {
+  color: var(--deep-text);
+}
+
+.dataform-panel p,
+.dataform-panel .dataform-pair,
+.rules-panel p,
+.rules-panel .rules-list p {
+  color: rgba(247, 243, 235, 0.78);
+}
+
+.dataform-panel .dataform-pair {
+  border-color: rgba(247, 243, 235, 0.24);
+}
+
+body[data-theme="dark"] .dataform-panel,
+body[data-theme="dark"] .rules-panel {
+  color: var(--deep-text);
+}
+
+body[data-theme="dark"] .dataform-panel {
+  background: #416257;
+  border-color: rgba(231, 228, 219, 0.2);
+}
+
+body[data-theme="dark"] .rules-panel {
+  background: var(--deep);
+  border-color: var(--deep);
+}
+
+body[data-theme="dark"] .dataform-panel .panel-kicker,
+body[data-theme="dark"] .rules-panel .panel-kicker {
+  color: rgba(231, 228, 219, 0.78);
+}
+
+body[data-theme="dark"] .dataform-panel h2,
+body[data-theme="dark"] .dataform-panel p,
+body[data-theme="dark"] .dataform-panel .dataform-pair,
+body[data-theme="dark"] .dataform-panel .dataform-pair strong,
+body[data-theme="dark"] .rules-panel p,
+body[data-theme="dark"] .rules-panel .rules-list p {
+  color: var(--deep-text);
+}
+
+/*
+ * Shared form system
+ *
+ * Forms use a quiet surface, explicit labels, consistent control height, and
+ * enough spacing for scanning. This applies to check-ins and diagnostics so
+ * both workflows feel like one product.
+ */
+.checkin-form,
+.diagnostic-form {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--teal);
+  border-radius: 12px;
+  box-shadow: var(--shadow-small);
+}
+
+.checkin-form::before,
+.diagnostic-form::before {
+  display: none;
+}
+
+.checkin-form {
+  display: grid;
+  gap: 22px;
+  padding: clamp(25px, 3vw, 36px);
+}
+
+.checkin-form > .panel-kicker {
+  padding-bottom: 15px;
+  border-bottom: 1px solid var(--line);
+}
+
+.checkin-form .form-grid-three,
+.checkin-form .form-grid-two {
+  margin-top: 0;
+}
+
+.form-grid-three {
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr) minmax(0, 0.72fr);
+  gap: 16px;
+}
+
+.form-grid-two {
+  gap: 16px;
+}
+
+.field-label {
+  gap: 8px;
+  color: var(--ink-soft);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.field-label input,
+.field-label select,
+.field-label textarea,
+.question-item select {
+  min-height: 46px;
+  padding: 12px 13px;
+  color: var(--ink);
+  background: var(--surface-soft);
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  font-size: 13px;
+  line-height: 1.4;
+  transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.field-label textarea {
+  min-height: 132px;
+  resize: vertical;
+}
+
+.field-label input::placeholder,
+.field-label textarea::placeholder {
+  color: var(--muted);
+  opacity: 0.82;
+}
+
+.field-label input:focus,
+.field-label select:focus,
+.field-label textarea:focus,
+.question-item select:focus {
+  background: var(--surface);
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(79, 117, 102, 0.14);
+  outline: 0;
+}
+
+.checkin-form .form-actions {
+  margin-top: 0;
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
+}
+
+body[data-theme="dark"] .field-label input,
+body[data-theme="dark"] .field-label select,
+body[data-theme="dark"] .field-label textarea,
+body[data-theme="dark"] .question-item select {
+  color: var(--ink);
+  background: var(--surface-soft);
+  border-color: var(--line-strong);
+}
+
+body[data-theme="dark"] .field-label input:focus,
+body[data-theme="dark"] .field-label select:focus,
+body[data-theme="dark"] .field-label textarea:focus,
+body[data-theme="dark"] .question-item select:focus {
+  background: var(--surface);
+  border-color: var(--teal);
+}
+
+@media (max-width: 760px) {
+  .form-grid-three {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .checkin-history-panel {
+    order: 2;
+  }
+}
+
+@media (max-width: 620px) {
+  .checkin-form {
+    gap: 18px;
+    padding: 20px 18px;
+  }
+
+  .form-grid-three,
+  .form-grid-two {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}
+
+/* Route/view transitions: calm, short, and disabled for reduced motion. */
+.view.is-visible {
+  animation: stackbridge-view-enter 360ms cubic-bezier(0.22, 0.78, 0.28, 1) both;
+}
+
+@keyframes stackbridge-view-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .view.is-visible {
+    animation: none;
+  }
+}
