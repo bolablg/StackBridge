@@ -6,20 +6,21 @@ StackBridge is a private learning and accountability workspace for people who al
 
 The path library is organized by professional profile and source platform. A learner can start with data engineering, machine learning engineering, or cloud architecture, choose the environment they already know, and see the destination bridges available for that profile.
 
-Version one has one live route: a Google Cloud Professional Data Engineer moving into AWS and preparing for the AWS Certified Data Engineer — Associate exam. The other role and platform combinations remain visible as coming-soon routes so the product can grow without changing its core user, path, or progress model.
+Version one has twelve live data-engineering bridges across GCP, AWS, Azure, and Databricks. GCP → AWS is the reference route, while Snowflake and the other professional profiles remain visible as coming-soon routes so the product can grow without changing its core user, path, or progress model.
 
 ## Path library
 
-- **Data engineering** — GCP → AWS is live; GCP → Azure, Snowflake, and Databricks are coming soon.
+- **Data engineering** — twelve directed bridges across GCP, AWS, Azure, and Databricks are live; Snowflake bridges are coming soon.
 - **Machine learning engineering** — role and platform bridges are coming soon.
 - **Cloud architecture** — role and platform bridges are coming soon.
 
 ## What is included
 
 - A 13-week roadmap with milestone status and field notes.
-- A 16-question baseline diagnostic with domain scoring.
+- A 16-question, target-specific baseline diagnostic with domain scoring.
+- Four embedded exam simulations for every live bridge, with saved answers, scores, and rationales.
 - Weekly accountability check-ins and recent-history tracking.
-- GCP → AWS service translation, including Dataform → dbt + Redshift.
+- Route-specific service translation, including the GCP → AWS example of Dataform → dbt + Redshift.
 - The existing Markdown study guides and official AWS resources, rendered as embedded guide pages inside the app.
 - Browser-local persistence for immediate use, with per-user hosted sync when Clerk and Neon are configured.
 - Installable PWA shell with offline app loading, network awareness, and a dim theme.
@@ -110,7 +111,7 @@ Set `CLERK_AUTHORIZED_PARTIES` per target using the exact origins that should be
 
 The public BOLABLG.com legal and account center at [`legal.bolablg.com`](https://legal.bolablg.com) is intentionally unauthenticated and has no Clerk SDK, Clerk keys, database credentials, or learner data. Its StackBridge product record links to the production URL only; it does not link visitors to a preview deployment.
 
-The first authenticated request creates or upgrades the application tables and seeds the default `gcp-to-aws-data-engineer` path. [`db/schema.sql`](./db/schema.sql) contains the same DDL if you prefer to apply it manually. Each user’s progress is isolated by `(user_id, path_key)`.
+The first authenticated request creates or upgrades the application tables and seeds all active data-engineering paths, including `gcp-to-aws-data-engineer`. [`db/schema.sql`](./db/schema.sql) contains the same DDL if you prefer to apply it manually. Each user’s progress is isolated by `(user_id, path_key)`.
 
 ### Access control
 

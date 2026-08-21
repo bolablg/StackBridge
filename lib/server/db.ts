@@ -1,16 +1,34 @@
 import { neon, type NeonQueryFunction } from "@neondatabase/serverless";
+import {
+  ACTIVE_PATH_KEYS,
+  DEFAULT_PATH_KEY as CONTENT_DEFAULT_PATH_KEY,
+  PATH_BLUEPRINTS,
+} from "../content";
 
-export const DEFAULT_PATH_KEY = "gcp-to-aws-data-engineer";
+export const DEFAULT_PATH_KEY = CONTENT_DEFAULT_PATH_KEY;
 
-export const PATH_DEFINITIONS = {
-  [DEFAULT_PATH_KEY]: {
-    title: "GCP → AWS Data Engineering",
-    sourcePlatform: "gcp",
-    targetPlatform: "aws",
-    focus: "AWS Certified Data Engineer — Associate",
-    version: 1,
-  },
-} as const;
+export type PathDefinition = {
+  title: string;
+  sourcePlatform: string;
+  targetPlatform: string;
+  focus: string;
+  version: number;
+};
+
+export const PATH_DEFINITIONS: Record<string, PathDefinition> = Object.fromEntries(
+  ACTIVE_PATH_KEYS.map((pathKey) => {
+    const blueprint = PATH_BLUEPRINTS[pathKey];
+    if (!blueprint) throw new Error(`Missing active path blueprint: ${pathKey}`);
+
+    return [pathKey, {
+      title: blueprint.title,
+      sourcePlatform: blueprint.source.key,
+      targetPlatform: blueprint.target.key,
+      focus: blueprint.focus,
+      version: 1,
+    }];
+  }),
+);
 
 export type Sql = NeonQueryFunction<false, false>;
 let schemaReady: Promise<void> | undefined;
@@ -133,7 +151,13 @@ export async function ensureSchema(sql: Sql) {
             ${definition.focus},
             ${JSON.stringify(definition)}::jsonb
           )
-          ON CONFLICT (path_key) DO NOTHING
+          ON CONFLICT (path_key) DO UPDATE SET
+            title = EXCLUDED.title,
+            source_platform = EXCLUDED.source_platform,
+            target_platform = EXCLUDED.target_platform,
+            focus = EXCLUDED.focus,
+            definition = EXCLUDED.definition,
+            updated_at = NOW()
         `;
       }
     })();
