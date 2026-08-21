@@ -71,7 +71,7 @@ Never paste a full key into a diagnostic command. Checking only the prefix and w
 
 ## Relationship to legal-auth
 
-[`legal-auth`](../../legal-auth/) is a separate, public BOLABLG.com legal and account-support site. It has no Clerk SDK, no Clerk environment variables, and no authenticated routes. Its StackBridge product record links to `https://stackbridge.bolablg.com` only; it does not link to a preview URL and does not participate in the Preview/Production key split.
+[`legal-auth`](https://github.com/bolablg/legal-auth) is a separate, public BOLABLG.com legal and account-support site. It has no Clerk SDK, no Clerk environment variables, and no authenticated routes. Its StackBridge product record links to `https://stackbridge.bolablg.com` only; it does not link to a preview URL and does not participate in the Preview/Production key split.
 
 Keep `clerk.bolablg.com` reserved for Clerk's production custom domain, Frontend API, and OAuth callbacks. Keep `legal.bolablg.com` as the separate public Vercel hostname. Never point the Clerk hostname to Vercel.
 
