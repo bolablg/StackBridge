@@ -122,7 +122,7 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
     const session = await getAppSession();
     if (!session) return renderDashboard();
 
-    const access = await getAccessDecision(session.user, session.sql);
+    const access = await getAccessDecision(session.user, session.clerkUserId, session.sql);
     if (access.status !== "allowed") return renderDashboard();
   }
 

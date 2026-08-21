@@ -11,6 +11,10 @@ export type AppSession = {
   user: PublicUser;
 };
 
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
 function isHostedAuthConfigured() {
   return !isLocalMode() && Boolean(
     process.env.DATABASE_URL
@@ -32,15 +36,16 @@ export async function getAppSession(): Promise<AppSession | null> {
   const sql = getSql();
   await ensureSchema(sql);
   const clerkUser = await currentUser();
-  const email = clerkUser?.emailAddresses.find((entry) => entry.id === clerkUser.primaryEmailAddressId)?.emailAddress
+  const rawEmail = clerkUser?.emailAddresses.find((entry) => entry.id === clerkUser.primaryEmailAddressId)?.emailAddress
     || clerkUser?.emailAddresses[0]?.emailAddress
     || `${userId}@clerk.local`;
+  const email = normalizeEmail(rawEmail);
   const displayName = clerkUser?.fullName || clerkUser?.firstName || email.split("@")[0] || "Learner";
   const rows = await sql`
     INSERT INTO app_users (id, email, display_name)
-    VALUES (${userId}, ${email}, ${displayName})
-    ON CONFLICT (id)
-    DO UPDATE SET email = EXCLUDED.email, display_name = EXCLUDED.display_name, updated_at = NOW()
+    VALUES (${crypto.randomUUID()}, ${email}, ${displayName})
+    ON CONFLICT (email)
+    DO UPDATE SET display_name = EXCLUDED.display_name, updated_at = NOW()
     RETURNING id, email, display_name
   ` as unknown as AppUserRow[];
 

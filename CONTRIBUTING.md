@@ -32,6 +32,18 @@ The example configuration sets `STACKBRIDGE_MODE=local`. In local mode:
 
 To work on hosted authentication, set `STACKBRIDGE_MODE=hosted` and configure every required Clerk, Neon, and admin-email variable privately. Never commit credentials or use local mode for a public deployment.
 
+### Clerk environment split
+
+Keep the Clerk instance aligned with the deployment target:
+
+- Vercel Preview builds — use the Clerk development instance (`pk_test_…` and `sk_test_…`). This covers `dev-*` previews, pull-request previews, and staging validation.
+- Vercel Production — use the Clerk production instance (`pk_live_…` and `sk_live_…`) and deploy only through the reviewed `main` path at `https://stackbridge.bolablg.com`.
+- Local development — keep `STACKBRIDGE_MODE=local` unless you are intentionally testing hosted mode with development credentials.
+
+Never place production Clerk keys in a preview environment, a local checkout, a pull request, or source control. Keep the publishable and secret keys paired within the same Vercel environment, and configure `CLERK_AUTHORIZED_PARTIES` with the exact origins for that target.
+
+The separate [`legal-auth`](./legal-auth/) project is public and unauthenticated. It does not use these variables or the Clerk SDK; its StackBridge link points to production only.
+
 ## Useful commands
 
 ```bash

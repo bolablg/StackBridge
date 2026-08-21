@@ -14,7 +14,7 @@ export default async function AccessRequestsPage() {
 
   const session = await getAppSession();
   if (!session) redirect("/");
-  const access = await getAccessDecision(session.user, session.sql);
+  const access = await getAccessDecision(session.user, session.clerkUserId, session.sql);
   if (!access.isAdmin) redirect("/");
 
   const requests = await listAccessRequests(session.sql);
