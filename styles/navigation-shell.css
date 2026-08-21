@@ -433,7 +433,7 @@
   color: var(--muted);
   background: transparent;
   border: 1px solid var(--line);
-  border-radius: 50%;
+  border-radius: var(--button-radius-icon);
 }
 
 .icon-button .navigation-svg {

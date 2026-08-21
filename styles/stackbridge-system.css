@@ -24,6 +24,10 @@
   --shadow-small: 0 1px 3px rgba(45, 59, 60, 0.05), 0 0 1px rgba(45, 59, 60, 0.06);
   --radius: 24px;
   --radius-small: 14px;
+  --button-radius: 11.25px;
+  --button-radius-compact: 7px;
+  --button-radius-icon: 9.5px;
+  --button-radius-auth: 11.75px;
 }
 
 body[data-theme="dark"] {
@@ -113,7 +117,7 @@ body {
 .button {
   min-height: 45px;
   padding: 11px 19px;
-  border-radius: 999px;
+  border-radius: var(--button-radius);
   font-family: var(--body);
   font-size: 11px;
   font-weight: 700;
@@ -151,7 +155,7 @@ body {
 .icon-button {
   width: 36px;
   height: 36px;
-  border-radius: 12px;
+  border-radius: var(--button-radius-icon);
 }
 
 .view {
@@ -391,7 +395,7 @@ body {
 .path-route-action {
   padding: 9px 13px;
   border: 1px solid var(--line-strong);
-  border-radius: 999px;
+  border-radius: var(--button-radius-compact);
   font-family: var(--body);
   font-size: 10px;
   transition: background 180ms ease, border-color 180ms ease, color 180ms ease;
@@ -427,7 +431,7 @@ body {
 
 .auth-minimal .clerk-auth-primary {
   min-height: 47px !important;
-  border-radius: 999px !important;
+  border-radius: var(--button-radius-auth) !important;
   box-shadow: 0 4px 12px rgba(152, 86, 77, 0.14) !important;
 }
 
@@ -435,7 +439,7 @@ body {
   min-height: 47px !important;
   background: var(--surface) !important;
   border: 1px solid var(--line) !important;
-  border-radius: 14px !important;
+  border-radius: var(--button-radius-compact) !important;
 }
 
 .auth-minimal .clerk-auth-social:hover {
@@ -801,15 +805,4 @@ body {
   .main-content .week-card {
     border-radius: 9px;
   }
-}
-
-/*
- * Work-surface button geometry
- *
- * A 45px-high pill has an effective 22.5px corner radius. Halving that
- * visible rounding gives the primary and secondary content actions an
- * 11.25px radius while leaving the sidebar and authentication UI unchanged.
- */
-.main-content .button {
-  border-radius: 11.25px;
 }
