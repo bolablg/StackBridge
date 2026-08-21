@@ -1,6 +1,6 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { ensureSchema, getSql } from "./db";
-import { isLocalMode } from "./config";
+import { getDataEnvironment, isLocalMode } from "./config";
 
 export type PublicUser = { id: string; email: string; displayName: string };
 type AppUserRow = { id: string; email: string; display_name: string };
@@ -8,6 +8,7 @@ type AppUserRow = { id: string; email: string; display_name: string };
 export type AppSession = {
   sql: ReturnType<typeof getSql>;
   clerkUserId: string;
+  environmentKey: string;
   user: PublicUser;
 };
 
@@ -41,15 +42,16 @@ export async function getAppSession(): Promise<AppSession | null> {
     || `${userId}@clerk.local`;
   const email = normalizeEmail(rawEmail);
   const displayName = clerkUser?.fullName || clerkUser?.firstName || email.split("@")[0] || "Learner";
+  const environmentKey = getDataEnvironment();
   const rows = await sql`
-    INSERT INTO app_users (id, email, display_name)
-    VALUES (${crypto.randomUUID()}, ${email}, ${displayName})
-    ON CONFLICT (email)
+    INSERT INTO app_users (id, email, display_name, environment_key)
+    VALUES (${crypto.randomUUID()}, ${email}, ${displayName}, ${environmentKey})
+    ON CONFLICT (environment_key, LOWER(email))
     DO UPDATE SET display_name = EXCLUDED.display_name, updated_at = NOW()
     RETURNING id, email, display_name
   ` as unknown as AppUserRow[];
 
-  return { sql, clerkUserId: userId, user: publicUser(rows[0]) };
+  return { sql, clerkUserId: userId, environmentKey, user: publicUser(rows[0]) };
 }
 
 export function publicUser(row: AppUserRow): PublicUser {

@@ -1,5 +1,6 @@
 import { DEFAULT_PATH_KEY, ensureSchema, getSql, type Sql } from "./db";
 import type { PublicUser } from "./auth";
+import { getDataEnvironment } from "./config";
 
 export const DEFAULT_ADMIN_EMAIL = "admin@example.com";
 
@@ -76,6 +77,7 @@ export async function getAccessDecision(user: PublicUser, clerkUserId: string, d
   await ensureSchema(database);
 
   const email = normalizeEmail(user.email);
+  const environmentKey = getDataEnvironment();
   const isAdmin = email === adminEmail();
   if (isAdmin) {
     return { status: "allowed", isAdmin: true, email, displayName: user.displayName, adminEmail: adminEmail() };
@@ -84,7 +86,8 @@ export async function getAccessDecision(user: PublicUser, clerkUserId: string, d
   const grants = await database`
     SELECT clerk_user_id
     FROM access_grants
-    WHERE path_key = ${DEFAULT_PATH_KEY}
+    WHERE environment_key = ${environmentKey}
+      AND path_key = ${DEFAULT_PATH_KEY}
       AND (
         clerk_user_id = ${clerkUserId}
         OR clerk_user_id = ${user.id}
@@ -100,7 +103,8 @@ export async function getAccessDecision(user: PublicUser, clerkUserId: string, d
   const requests = await database`
     SELECT id, status, created_at
     FROM access_requests
-    WHERE path_key = ${DEFAULT_PATH_KEY}
+    WHERE environment_key = ${environmentKey}
+      AND path_key = ${DEFAULT_PATH_KEY}
       AND (
         clerk_user_id = ${clerkUserId}
         OR clerk_user_id = ${user.id}
@@ -181,10 +185,12 @@ async function notifyAdminOfRequest(request: PublicAccessRequest) {
 
 export async function submitAccessRequest(user: PublicUser, clerkUserId: string, message: string, database = getSql()) {
   await ensureSchema(database);
+  const environmentKey = getDataEnvironment();
   const existing = await database`
     SELECT id, path_key, clerk_user_id, email, display_name, message, status, created_at, updated_at, reviewed_at, reviewed_by
     FROM access_requests
-    WHERE path_key = ${DEFAULT_PATH_KEY}
+    WHERE environment_key = ${environmentKey}
+      AND path_key = ${DEFAULT_PATH_KEY}
       AND status = 'pending'
       AND (
         clerk_user_id = ${clerkUserId}
@@ -201,10 +207,10 @@ export async function submitAccessRequest(user: PublicUser, clerkUserId: string,
   const id = crypto.randomUUID();
   const inserted = await database`
     INSERT INTO access_requests (
-      id, path_key, clerk_user_id, email, display_name, message, status
+      id, path_key, environment_key, clerk_user_id, email, display_name, message, status
     )
     VALUES (
-      ${id}, ${DEFAULT_PATH_KEY}, ${clerkUserId}, ${normalizeEmail(user.email)}, ${user.displayName}, ${message || null}, 'pending'
+      ${id}, ${DEFAULT_PATH_KEY}, ${environmentKey}, ${clerkUserId}, ${normalizeEmail(user.email)}, ${user.displayName}, ${message || null}, 'pending'
     )
     ON CONFLICT DO NOTHING
     RETURNING id, path_key, clerk_user_id, email, display_name, message, status, created_at, updated_at, reviewed_at, reviewed_by
@@ -213,7 +219,8 @@ export async function submitAccessRequest(user: PublicUser, clerkUserId: string,
   const request = inserted[0] || (await database`
     SELECT id, path_key, clerk_user_id, email, display_name, message, status, created_at, updated_at, reviewed_at, reviewed_by
     FROM access_requests
-    WHERE path_key = ${DEFAULT_PATH_KEY}
+    WHERE environment_key = ${environmentKey}
+      AND path_key = ${DEFAULT_PATH_KEY}
       AND status = 'pending'
       AND (
         clerk_user_id = ${clerkUserId}
@@ -230,10 +237,11 @@ export async function submitAccessRequest(user: PublicUser, clerkUserId: string,
 
 export async function listAccessRequests(database: Sql, status: AccessRequestStatus = "pending") {
   await ensureSchema(database);
+  const environmentKey = getDataEnvironment();
   const rows = await database`
     SELECT id, path_key, clerk_user_id, email, display_name, message, status, created_at, updated_at, reviewed_at, reviewed_by
     FROM access_requests
-    WHERE path_key = ${DEFAULT_PATH_KEY} AND status = ${status}
+    WHERE environment_key = ${environmentKey} AND path_key = ${DEFAULT_PATH_KEY} AND status = ${status}
     ORDER BY created_at ASC
   ` as unknown as AccessRequestRow[];
   return rows.map(publicRequest);
@@ -246,10 +254,11 @@ export async function reviewAccessRequest(
   status: Extract<AccessRequestStatus, "approved" | "denied">,
 ) {
   await ensureSchema(database);
+  const environmentKey = getDataEnvironment();
   const rows = await database`
     SELECT id, path_key, clerk_user_id, email, display_name, message, status, created_at, updated_at, reviewed_at, reviewed_by
     FROM access_requests
-    WHERE id = ${requestId} AND path_key = ${DEFAULT_PATH_KEY}
+    WHERE id = ${requestId} AND environment_key = ${environmentKey} AND path_key = ${DEFAULT_PATH_KEY}
     LIMIT 1
   ` as unknown as AccessRequestRow[];
   const request = rows[0];
@@ -257,9 +266,9 @@ export async function reviewAccessRequest(
 
   if (status === "approved") {
     await database`
-      INSERT INTO access_grants (path_key, clerk_user_id, email, granted_by)
-      VALUES (${request.path_key}, ${request.clerk_user_id}, ${normalizeEmail(request.email)}, ${reviewer.id})
-      ON CONFLICT (path_key, clerk_user_id)
+      INSERT INTO access_grants (path_key, environment_key, clerk_user_id, email, granted_by)
+      VALUES (${request.path_key}, ${environmentKey}, ${request.clerk_user_id}, ${normalizeEmail(request.email)}, ${reviewer.id})
+      ON CONFLICT (environment_key, path_key, clerk_user_id)
       DO UPDATE SET email = EXCLUDED.email, granted_by = EXCLUDED.granted_by, updated_at = NOW()
     `;
   }
@@ -267,7 +276,7 @@ export async function reviewAccessRequest(
   const updated = await database`
     UPDATE access_requests
     SET status = ${status}, updated_at = NOW(), reviewed_at = NOW(), reviewed_by = ${reviewer.id}
-    WHERE id = ${requestId}
+    WHERE id = ${requestId} AND environment_key = ${environmentKey}
     RETURNING id, path_key, clerk_user_id, email, display_name, message, status, created_at, updated_at, reviewed_at, reviewed_by
   ` as unknown as AccessRequestRow[];
   return updated[0] ? publicRequest(updated[0]) : null;

@@ -8,7 +8,6 @@ import {
   ACTIVE_PATH_COUNT,
   ACTIVE_PATH_KEYS,
   DEFAULT_PATH_KEY,
-  DOMAIN_META,
   getPathBlueprint,
   PATH_CATALOG,
   STATUS_LABELS,
@@ -88,7 +87,8 @@ function parseNavigation(pathname: string, requestedPathKey?: string): Navigatio
 }
 
 type DashboardState = {
-  version: 1;
+  version: 2;
+  revision: number;
   pathKey: string;
   weekStatus: Record<string, WeekStatus>;
   weekNotes: Record<string, string>;
@@ -133,6 +133,7 @@ type SimulationResult = {
 type SimulationAttempt = {
   answers: Record<string, string>;
   result: SimulationResult | null;
+  history: SimulationResult[];
 };
 
 type Checkin = {
@@ -172,7 +173,8 @@ type AccessPayload = {
 function createDefaultState(pathKey: string = PATH_KEY): DashboardState {
   const blueprint = getPathBlueprint(pathKey);
   return {
-    version: 1,
+    version: 2,
+    revision: 0,
     pathKey: blueprint.key,
     weekStatus: Object.fromEntries(blueprint.weeks.map((week) => [String(week.number), "not-started"])),
     weekNotes: {},
@@ -204,6 +206,8 @@ function normalizeState(value: unknown, pathKey: string = PATH_KEY): DashboardSt
   return {
     ...defaults,
     ...parsed,
+    version: 2,
+    revision: Number.isSafeInteger(Number(parsed.revision)) && Number(parsed.revision) >= 0 ? Number(parsed.revision) : 0,
     pathKey: blueprint.key,
     weekStatus: { ...defaults.weekStatus, ...(parsed.weekStatus || {}) },
     weekNotes: { ...defaults.weekNotes, ...(parsed.weekNotes || {}) },
@@ -218,7 +222,16 @@ function normalizeState(value: unknown, pathKey: string = PATH_KEY): DashboardSt
       answers: Array.isArray(parsed.diagnostic?.answers) ? parsed.diagnostic.answers : defaults.diagnostic.answers,
     },
     checkins: Array.isArray(parsed.checkins) ? parsed.checkins : [],
-    simulations: parsed.simulations && typeof parsed.simulations === "object" ? parsed.simulations : {},
+    simulations: parsed.simulations && typeof parsed.simulations === "object"
+      ? Object.fromEntries(Object.entries(parsed.simulations).map(([key, attempt]) => {
+        const normalizedAttempt = attempt && typeof attempt === "object" ? attempt as Partial<SimulationAttempt> : {};
+        return [key, {
+          answers: normalizedAttempt.answers && typeof normalizedAttempt.answers === "object" ? normalizedAttempt.answers : {},
+          result: normalizedAttempt.result || null,
+          history: Array.isArray(normalizedAttempt.history) ? normalizedAttempt.history : normalizedAttempt.result ? [normalizedAttempt.result] : [],
+        } satisfies SimulationAttempt];
+      }))
+      : {},
     preferences: {
       ...defaults.preferences,
       ...(parsed.preferences || {}),
@@ -341,6 +354,8 @@ function DashboardCore({ auth, isAdmin, pathKey: requestedPathKey }: { auth: Aut
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const syncTimer = useRef<number | null>(null);
   const toastTimer = useRef<number | null>(null);
+  const sidebarRef = useRef<HTMLElement | null>(null);
+  const mobileMenuButtonRef = useRef<HTMLButtonElement | null>(null);
   const tokenGetter = auth.getToken;
 
   const announce = useCallback((message: string) => {
@@ -382,15 +397,29 @@ function DashboardCore({ auth, isAdmin, pathKey: requestedPathKey }: { auth: Aut
 
   useEffect(() => {
     if (!mobileMenuOpen) return;
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setMobileMenuOpen(false);
+    const sidebar = sidebarRef.current;
+    const focusable = () => Array.from(sidebar?.querySelectorAll<HTMLElement>('a[href], button:not([disabled]):not([tabindex="-1"]), summary, select, input:not([type="hidden"]), textarea') || []).filter((item) => item.offsetParent !== null);
+    const handleKeyboard = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMobileMenuOpen(false);
+        window.requestAnimationFrame(() => mobileMenuButtonRef.current?.focus());
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const items = focusable();
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
     };
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", closeOnEscape);
+    window.addEventListener("keydown", handleKeyboard);
+    window.requestAnimationFrame(() => focusable()[0]?.focus());
     return () => {
       document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", closeOnEscape);
+      window.removeEventListener("keydown", handleKeyboard);
     };
   }, [mobileMenuOpen]);
 
@@ -416,14 +445,8 @@ function DashboardCore({ auth, isAdmin, pathKey: requestedPathKey }: { auth: Aut
           credentials: "same-origin",
           headers: await getHeaders(),
         });
-        if (response.status === 401) {
-          setSyncStatus("auth");
-          return;
-        }
-        if (response.status === 503) {
-          setSyncStatus("setup");
-          return;
-        }
+        if (response.status === 401) { setSyncStatus("auth"); setRemoteReady(true); return; }
+        if (response.status === 503) { setSyncStatus("setup"); setRemoteReady(true); return; }
         if (!response.ok) throw new Error(`Progress request failed: ${response.status}`);
         const payload = await response.json() as { state?: unknown };
         if (!cancelled && payload.state) {
@@ -436,7 +459,7 @@ function DashboardCore({ auth, isAdmin, pathKey: requestedPathKey }: { auth: Aut
           setSyncStatus("active");
         }
       } catch (error) {
-        if (!cancelled) setSyncStatus("error");
+        if (!cancelled) { setSyncStatus("error"); setRemoteReady(true); }
         console.info("StackBridge hosted progress unavailable", error);
       }
     })();
@@ -460,6 +483,17 @@ function DashboardCore({ auth, isAdmin, pathKey: requestedPathKey }: { auth: Aut
           });
           if (response.status === 401) setSyncStatus("auth");
           else if (response.status === 503) setSyncStatus("setup");
+          else if (response.status === 409) {
+            const latestResponse = await fetch(`/api/progress?path=${encodeURIComponent(blueprint.key)}`, { cache: "no-store", credentials: "same-origin", headers: await getHeaders() });
+            const latest = latestResponse.ok ? await latestResponse.json() as { state?: unknown } : null;
+            if (latest?.state) {
+              const latestState = normalizeState(latest.state, blueprint.key);
+              setState(latestState);
+              window.localStorage.setItem(storageKey(auth.userId, blueprint.key), JSON.stringify(latestState));
+              announce("A newer saved revision was loaded from the database.");
+              setSyncStatus("active");
+            } else throw new Error("Could not reconcile a newer progress revision.");
+          }
           else if (!response.ok) throw new Error(`Progress save failed: ${response.status}`);
           else setSyncStatus("active");
         } catch (error) {
@@ -469,7 +503,7 @@ function DashboardCore({ auth, isAdmin, pathKey: requestedPathKey }: { auth: Aut
       })();
     }, 350);
     return () => { if (syncTimer.current) window.clearTimeout(syncTimer.current); };
-  }, [auth.getToken, auth.userId, blueprint.key, getHeaders, hydratedScope, remoteReady, state, storageScope]);
+  }, [announce, auth.getToken, auth.userId, blueprint.key, getHeaders, hydratedScope, remoteReady, state, storageScope]);
 
   useEffect(() => {
     document.body.dataset.theme = state.preferences.theme;
@@ -487,7 +521,11 @@ function DashboardCore({ auth, isAdmin, pathKey: requestedPathKey }: { auth: Aut
   const authRequired = auth.clerkEnabled && auth.isLoaded && !auth.userId;
 
   function updateState(updater: (previous: DashboardState) => DashboardState, message?: string) {
-    setState(updater);
+    setState((previous) => {
+      const next = updater(previous);
+      if (next === previous) return previous;
+      return { ...next, version: 2, revision: previous.revision + 1 };
+    });
     if (message) announce(message);
   }
 
@@ -511,7 +549,7 @@ function DashboardCore({ auth, isAdmin, pathKey: requestedPathKey }: { auth: Aut
       announce(`Answer all ${questions.length} questions before scoring the baseline.`);
       return;
     }
-    const domains = Object.keys(DOMAIN_META);
+    const domains = Object.keys(blueprint.target.diagnosticDomains);
     const byDomain = Object.fromEntries(domains.map((domain) => [domain, { score: 0, total: 0, percentage: 0 }])) as DiagnosticResult["byDomain"];
     let score = 0;
     questions.forEach((question, index) => {
@@ -596,8 +634,8 @@ function DashboardCore({ auth, isAdmin, pathKey: requestedPathKey }: { auth: Aut
       try {
         const parsed = JSON.parse(String(reader.result));
         if (!parsed || typeof parsed !== "object" || !parsed.weekStatus) throw new Error("Invalid backup");
-        setState(normalizeState(parsed, blueprint.key));
-        announce("Backup imported.");
+        if (parsed.pathKey && parsed.pathKey !== blueprint.key) throw new Error("Backup belongs to another path");
+        updateState((previous) => ({ ...normalizeState(parsed, blueprint.key), revision: previous.revision }), "Backup imported.");
       } catch {
         announce("That file is not a valid StackBridge backup.");
       }
@@ -607,17 +645,17 @@ function DashboardCore({ auth, isAdmin, pathKey: requestedPathKey }: { auth: Aut
   }
 
   function resetApp() {
-    if (!window.confirm("Reset all locally saved progress, notes, diagnostic results, and check-ins?")) return;
-    setState(createDefaultState(blueprint.key));
-    announce("Dashboard reset.");
+    if (!window.confirm(`Reset all saved progress, notes, diagnostic results, and check-ins for ${blueprint.title}? This will sync when hosted.`)) return;
+    updateState((previous) => ({ ...createDefaultState(blueprint.key), revision: previous.revision }), "Dashboard reset.");
   }
 
-  if (authLoading) return <div className="app-loading">Loading your StackBridge path…</div>;
+  if (authLoading || Boolean(auth.userId && !remoteReady)) return <div className="app-loading">Loading your StackBridge path…</div>;
 
   return (
     <>
+      <a className="skip-link" href="#main-content">Skip to main content</a>
       <div className="app-shell">
-        <aside className={`sidebar${mobileMenuOpen ? " is-mobile-open" : ""}`} aria-label="StackBridge navigation">
+        <aside ref={sidebarRef} className={`sidebar${mobileMenuOpen ? " is-mobile-open" : ""}`} aria-label="StackBridge navigation">
           <div className="sidebar-header">
             <Link className="brand-lockup" href="/" aria-label="StackBridge overview" onClick={() => setMobileMenuOpen(false)}>
               <div className="brand-mark" aria-hidden="true">SB</div>
@@ -627,7 +665,7 @@ function DashboardCore({ auth, isAdmin, pathKey: requestedPathKey }: { auth: Aut
               </div>
             </Link>
             <span className="mobile-current-context">{navigation.scope === "track" ? `${blueprint.source.short} → ${blueprint.target.short}` : navigation.scope === "domain" ? "Data Engineering" : "Path library"}</span>
-            <button className="mobile-menu-toggle" type="button" aria-expanded={mobileMenuOpen} aria-controls="stackbridge-menu" onClick={() => setMobileMenuOpen((open) => !open)}>
+            <button ref={mobileMenuButtonRef} className="mobile-menu-toggle" type="button" aria-expanded={mobileMenuOpen} aria-controls="stackbridge-menu" onClick={() => setMobileMenuOpen((open) => !open)}>
               <span className="mobile-menu-icon" aria-hidden="true"><i /><i /></span>
               <span>{mobileMenuOpen ? "Close" : "Menu"}</span>
             </button>
@@ -667,7 +705,7 @@ function DashboardCore({ auth, isAdmin, pathKey: requestedPathKey }: { auth: Aut
                   <summary className="sidebar-domain-summary"><span className="nav-icon" aria-hidden="true">01</span><span><strong>Data Engineering</strong><small>choose a bridge</small></span><span className="sidebar-chevron" aria-hidden="true">↘</span></summary>
                   <div className="sidebar-domain-links">
                     <Link className={`sidebar-domain-link${navigation.scope === "domain" ? " is-active" : ""}`} href="/data-engineering" onClick={() => setMobileMenuOpen(false)}>All tracks <span>→</span></Link>
-                    {PATH_CATALOG.find((group) => group.key === DOMAIN_SLUG)?.sources.flatMap((source) => source.routes.filter((route) => route.status === "available" && route.pathKey).map((route) => ({ source, route }))).slice(0, 6).map(({ source, route }) => (
+                    {PATH_CATALOG.find((group) => group.key === DOMAIN_SLUG)?.sources.flatMap((source) => source.routes.filter((route) => route.status === "available" && route.pathKey).map((route) => ({ source, route }))).map(({ source, route }) => (
                       <Link key={route.key} className="sidebar-domain-link" href={trackHref(route.pathKey || PATH_KEY)} onClick={() => setMobileMenuOpen(false)}>{source.short} → {route.targetMark} <span className="sidebar-live-mark">live</span></Link>
                     ))}
                   </div>
@@ -685,10 +723,10 @@ function DashboardCore({ auth, isAdmin, pathKey: requestedPathKey }: { auth: Aut
               </div>
             </div>
           </div>
-          <button className="mobile-menu-backdrop" type="button" aria-label="Close navigation" tabIndex={mobileMenuOpen ? 0 : -1} onClick={() => setMobileMenuOpen(false)} />
+          <button className="mobile-menu-backdrop" type="button" aria-label="Close navigation" tabIndex={-1} onClick={() => setMobileMenuOpen(false)} />
         </aside>
 
-        <main id="main-content" className="main-content">
+        <main id="main-content" className="main-content" inert={mobileMenuOpen || undefined}>
           <header className="topbar">
             <div className="topbar-context"><span className="live-dot" aria-hidden="true" /><span>{navigation.scope === "home" ? "StackBridge / overview" : navigation.scope === "domain" ? "data engineering / track library" : `${blueprint.source.short} → ${blueprint.target.short} / ${VIEW_CONTEXT_LABELS[view]}`}</span></div>
             <div className="topbar-actions">
@@ -762,6 +800,7 @@ function DomainOverviewView({ onOpenPath }: { onOpenPath: (pathKey?: string) => 
 function TrackOverviewView({ blueprint, state, completion, verifiedCount, nextWeek, setupCount, setupReady, onView, onUpdate }: { blueprint: PathBlueprint; state: DashboardState; completion: number; verifiedCount: number; nextWeek: PathBlueprint["weeks"][number]; setupCount: number; setupReady: boolean; onView: (view: View) => void; onUpdate: (updater: (previous: DashboardState) => DashboardState, message?: string) => void }) {
   const orbitStyle = { "--progress": `${completion * 3.6}deg`, "--progress-pct": `${completion}%` } as CSSProperties;
   const { source, target } = blueprint;
+  const safety = target.safety;
   return (
     <section className="view is-visible">
       <div className="hero-grid">
@@ -782,7 +821,7 @@ function TrackOverviewView({ blueprint, state, completion, verifiedCount, nextWe
       <div className="metric-row"><Metric label="Current week" value={`W${String(nextWeek.number).padStart(2, "0")}`} note={nextWeek.title} /><Metric label="Verified" value={String(verifiedCount)} note={`of ${blueprint.weeks.length} milestones`} /><Metric label="Baseline" value={state.diagnostic.result ? `${state.diagnostic.result.score}/${baselineQuestions(blueprint).length}` : "—"} note={state.diagnostic.result ? `${state.diagnostic.result.percentage}% signal` : "not taken yet"} /><Metric label="Rhythm" value={state.setup.rhythm || "—"} note="weekly commitment" /></div>
       <div className="dashboard-grid">
         <section className="panel next-panel"><div className="panel-kicker"><span className="kicker-number">NEXT</span> the immediate move</div><div className="next-index">W{String(nextWeek.number).padStart(2, "0")}</div><h2>{nextWeek.title}</h2><p>{nextWeek.summary}</p><div className="next-deliverable"><span>field test</span><strong>{nextWeek.deliverable}</strong></div><button className="button button-dark" type="button" onClick={() => onView("roadmap")}>Open roadmap <span aria-hidden="true">→</span></button></section>
-        <section className="panel setup-panel"><div className="panel-kicker"><span className="kicker-number">W00</span> account &amp; safety</div><div className="section-heading"><div><h2>Earn the right to experiment.</h2><p>Write down the guardrails before the first bucket or warehouse.</p></div><span className={`status-pill ${setupReady ? "status-verified" : "status-not-started"}`}>{setupReady ? "ready" : "not ready"}</span></div><div className="gate-fields"><label className="field-label">Region<input value={state.setup.region} onChange={(event) => onUpdate((previous) => ({ ...previous, setup: { ...previous.setup, region: event.target.value } }))} placeholder="us-east-1" /></label><label className="field-label">Account plan<select value={state.setup.plan} onChange={(event) => onUpdate((previous) => ({ ...previous, setup: { ...previous.setup, plan: event.target.value } }))}><option value="">Select one</option><option>Free Tier</option><option>Paid / budgeted</option><option>Sandbox / organization</option></select></label><label className="field-label">Credit expiry<input type="date" value={state.setup.expiry} onChange={(event) => onUpdate((previous) => ({ ...previous, setup: { ...previous.setup, expiry: event.target.value } }))} /></label></div><div className="gate-checklist">{[["rootMfa", "Root MFA enabled"], ["nonRoot", "Non-root admin works"], ["budget", "Budget alert exists"], ["noOrg", "No unexpected organization"]].map(([key, label]) => <label key={key}><input type="checkbox" checked={state.setup.checks[key as keyof DashboardState["setup"]["checks"]]} onChange={(event) => onUpdate((previous) => ({ ...previous, setup: { ...previous.setup, checks: { ...previous.setup.checks, [key]: event.target.checked } } }))} /><span>{label}</span></label>)}</div><div className="setup-progress-note">{setupReady ? "Safety gate complete — proceed deliberately." : `${setupCount} / 4 guardrails checked`}</div></section>
+        <section className="panel setup-panel"><div className="panel-kicker"><span className="kicker-number">W00</span> {target.short.toLowerCase()} account &amp; safety</div><div className="section-heading"><div><h2>Earn the right to experiment.</h2><p>Write down the guardrails before the first storage object, cluster, or warehouse.</p></div><span className={`status-pill ${setupReady ? "status-verified" : "status-not-started"}`}>{setupReady ? "ready" : "not ready"}</span></div><div className="gate-fields"><label className="field-label">{safety.locationLabel}<input value={state.setup.region} onChange={(event) => onUpdate((previous) => ({ ...previous, setup: { ...previous.setup, region: event.target.value } }))} placeholder={safety.locationPlaceholder} /></label><label className="field-label">{safety.accountLabel}<select value={state.setup.plan} onChange={(event) => onUpdate((previous) => ({ ...previous, setup: { ...previous.setup, plan: event.target.value } }))}><option value="">Select one</option>{safety.accountOptions.map((option) => <option key={option}>{option}</option>)}</select></label><label className="field-label">{safety.expiryLabel}<input type="date" value={state.setup.expiry} onChange={(event) => onUpdate((previous) => ({ ...previous, setup: { ...previous.setup, expiry: event.target.value } }))} /></label></div><div className="gate-checklist">{safety.checks.map(([key, label]) => <label key={key}><input type="checkbox" checked={state.setup.checks[key]} onChange={(event) => onUpdate((previous) => ({ ...previous, setup: { ...previous.setup, checks: { ...previous.setup.checks, [key]: event.target.checked } } }))} /><span>{label}</span></label>)}</div><div className="setup-progress-note">{setupReady ? "Safety gate complete — proceed deliberately." : `${setupCount} / ${safety.checks.length} guardrails checked`}</div></section>
       </div>
       <section className="panel translation-panel"><div className="section-heading"><div><div className="panel-kicker"><span className="kicker-number">MAP</span> translate the boundaries</div><h2>Your {source.short} → {target.short} translation desk.</h2></div><p>Learn the service boundary and the decision behind it—not a list of product names.</p></div><div className="translation-grid">{blueprint.transfers.map((item) => <div className="translation-card" key={item.source}><span className="translation-gcp">{item.source}</span><span className="translation-arrow" aria-hidden="true">↘</span><strong className="translation-aws">{item.target}</strong><span className="translation-focus">{item.focus}</span></div>)}</div></section>
     </section>
@@ -850,14 +889,44 @@ function Metric({ label, value, note }: { label: string; value: string; note: st
 }
 
 function RoadmapView({ blueprint, state, filter, filteredWeeks, onFilter, onStatus, onNote, onView }: { blueprint: PathBlueprint; state: DashboardState; filter: "all" | WeekStatus; filteredWeeks: PathBlueprint["weeks"]; onFilter: (value: "all" | WeekStatus) => void; onStatus: (week: number, value: WeekStatus) => void; onNote: (week: number, value: string) => void; onView: (view: View) => void }) {
-  return <section className="view is-visible"><div className="page-intro"><div><div className="eyebrow"><span className="eyebrow-line" /> sequence / {blueprint.weeks.length} milestones</div><h1>The runway</h1><p>Each week has one practical center of gravity. Reading is preparation; evidence is progress.</p></div><div className="page-intro-aside"><span className="big-annotation">W00 → W{String(blueprint.weeks.length - 1).padStart(2, "0")}</span><span>from account<br />safety<br />to readiness<br />decision</span></div></div><div className="roadmap-toolbar"><div className="status-legend">{STATUS_OPTIONS.map(([value, label]) => <span key={value}><i className={`legend-dot legend-${value}`} /> {label}</span>)}</div><label className="filter-label">show<select value={filter} onChange={(event) => onFilter(event.target.value as "all" | WeekStatus)}><option value="all">all weeks</option>{STATUS_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label></div><div className="week-grid">{filteredWeeks.map((week) => { const status = state.weekStatus[String(week.number)] || "not-started"; return <article className="week-card" key={week.number}><div className="week-card-top"><span className="week-number">W{String(week.number).padStart(2, "0")}</span><select className="week-status-select" value={status} onChange={(event) => onStatus(week.number, event.target.value as WeekStatus)} aria-label={`Week ${week.number} status`}>{STATUS_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div><div className="week-card-heading"><h2>{week.title}</h2><span>{week.domain}</span></div><p>{week.summary}</p><div className="tag-row">{week.tags.map((tag) => <span key={tag}>{tag}</span>)}</div><div className="week-deliverable"><span>field test</span><strong>{week.deliverable}</strong></div><details className="week-note"><summary>＋ add field note</summary><textarea value={state.weekNotes[String(week.number)] || ""} onChange={(event) => onNote(week.number, event.target.value)} placeholder="What did you observe, build, or decide?" /></details><div className="week-card-actions"><Link href={appGuideHref(week.guide)}>open guide ↗</Link><button className="button button-outline" type="button" onClick={() => onView("checkin")}>Log evidence</button></div></article>; })}</div></section>;
+  return <section className="view is-visible"><div className="page-intro"><div><div className="eyebrow"><span className="eyebrow-line" /> sequence / {blueprint.weeks.length} milestones</div><h1>The runway</h1><p>Each week has one practical center of gravity. Reading is preparation; evidence is progress.</p></div><div className="page-intro-aside"><span className="big-annotation">W00 → W{String(blueprint.weeks.length - 1).padStart(2, "0")}</span><span>from account<br />safety<br />to readiness<br />decision</span></div></div><div className="roadmap-toolbar"><div className="status-legend">{STATUS_OPTIONS.map(([value, label]) => <span key={value}><i className={`legend-dot legend-${value}`} /> {label}</span>)}</div><label className="filter-label">show<select value={filter} onChange={(event) => onFilter(event.target.value as "all" | WeekStatus)}><option value="all">all weeks</option>{STATUS_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label></div>{filteredWeeks.length ? <div className="week-grid">{filteredWeeks.map((week) => { const status = state.weekStatus[String(week.number)] || "not-started"; return <article className="week-card" key={week.number}><div className="week-card-top"><span className="week-number">W{String(week.number).padStart(2, "0")}</span><select className="week-status-select" value={status} onChange={(event) => onStatus(week.number, event.target.value as WeekStatus)} aria-label={`Week ${week.number} status`}>{STATUS_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div><div className="week-card-heading"><h2>{week.title}</h2><span>{week.domain}</span></div><p>{week.summary}</p><div className="tag-row">{week.tags.map((tag) => <span key={tag}>{tag}</span>)}</div><div className="week-deliverable"><span>field test</span><strong>{week.deliverable}</strong></div><details className="week-note"><summary>＋ add field note</summary><textarea value={state.weekNotes[String(week.number)] || ""} onChange={(event) => onNote(week.number, event.target.value)} placeholder="What did you observe, build, or decide?" /></details><div className="week-card-actions"><Link href={appGuideHref(week.guide)}>open guide ↗</Link><button className="button button-outline" type="button" onClick={() => onView("checkin")}>Log evidence</button></div></article>; })}</div> : <div className="panel roadmap-empty"><span>no matching milestones</span><h2>Nothing is hidden permanently.</h2><p>No weeks currently use this status. Choose another filter or show the complete runway.</p><button className="button button-outline" type="button" onClick={() => onFilter("all")}>Show all weeks</button></div>}</section>;
 }
 
 function DiagnosticView({ blueprint, state, domain, onDomain, onUpdate, onSubmit }: { blueprint: PathBlueprint; state: DashboardState; domain: string; onDomain: (value: string) => void; onUpdate: (updater: (previous: DashboardState) => DashboardState, message?: string) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void }) {
   const allQuestions = baselineQuestions(blueprint);
-  const questions = domain === "all" ? allQuestions : allQuestions.filter((question) => question.domain === domain);
+  const indexedQuestions = allQuestions.map((question, baselineIndex) => ({ question, baselineIndex }));
+  const questions = domain === "all" ? indexedQuestions : indexedQuestions.filter(({ question }) => question.domain === domain);
   const result = state.diagnostic.result;
-  return <section className="view is-visible"><div className="page-intro"><div><div className="eyebrow"><span className="eyebrow-line" /> baseline / {blueprint.target.short} / {allQuestions.length} questions</div><h1>Find the gap.</h1><p>This is a signal, not a readiness claim. Use wrong answers to choose the next field test for {blueprint.title}.</p></div><div className="page-intro-aside"><span className="big-annotation">D1 → D4</span><span>ingestion<br />stores<br />operations<br />security</span></div></div><div className="diagnostic-layout"><aside className="panel diagnostic-side"><div className="panel-kicker"><span className="kicker-number">NOTE</span> baseline posture</div><h2>{result ? `${result.score} / ${allQuestions.length}` : "Not taken"}</h2><p>{result ? `${result.percentage}% correct. Read the domain breakdown before choosing a week.` : `Complete all ${allQuestions.length} questions, then use the score as a starting point—not a verdict.`}</p>{result && <div className="diagnostic-history">{Object.entries(result.byDomain).map(([key, value]) => <div className="domain-score" key={key}><div><span>{DOMAIN_META[key as keyof typeof DOMAIN_META].short}</span><strong>{DOMAIN_META[key as keyof typeof DOMAIN_META].label}</strong></div><b>{value.percentage}%</b></div>)}</div>}</aside><form className="panel diagnostic-form" onSubmit={onSubmit}><div className="diagnostic-toolbar"><label className="filter-label">show<select value={domain} onChange={(event) => onDomain(event.target.value)}><option value="all">all domains</option>{Object.entries(DOMAIN_META).map(([key, value]) => <option key={key} value={key}>{value.short} · {value.label}</option>)}</select></label><button className="text-button" type="button" onClick={() => onUpdate((previous) => ({ ...previous, diagnostic: { ...previous.diagnostic, answers: Array(allQuestions.length).fill(""), result: null } }), "Diagnostic cleared")}>clear baseline</button></div>{questions.map((question) => <div className="question-item" key={question.id}><div className="question-number">Q{String(question.number).padStart(2, "0")} <span>{DOMAIN_META[question.domain].short}</span></div><p>{question.prompt}</p><select value={state.diagnostic.answers[question.number - 1] || ""} onChange={(event) => onUpdate((previous) => { const answers = [...previous.diagnostic.answers]; answers[question.number - 1] = event.target.value; return { ...previous, diagnostic: { ...previous.diagnostic, answers } }; })}><option value="">Choose one</option>{Object.entries(question.options).map(([key, option]) => <option key={key} value={key}>{key} — {option}</option>)}</select></div>)}<div className="diagnostic-bottom"><label className="field-label">Time taken<input value={state.diagnostic.time} onChange={(event) => onUpdate((previous) => ({ ...previous, diagnostic: { ...previous.diagnostic, time: event.target.value } }))} placeholder="e.g. 24 minutes" /></label><label className="field-label">Confidence<select value={state.diagnostic.confidence} onChange={(event) => onUpdate((previous) => ({ ...previous, diagnostic: { ...previous.diagnostic, confidence: event.target.value } }))}><option value="">Select one</option><option>low</option><option>medium</option><option>high</option></select></label><label className="field-label diagnostic-wide">Uncertain questions<textarea value={state.diagnostic.uncertain} onChange={(event) => onUpdate((previous) => ({ ...previous, diagnostic: { ...previous.diagnostic, uncertain: event.target.value } }))} placeholder="Question numbers and why they felt uncertain" /></label></div><button className="button button-primary" type="submit">Score baseline <span aria-hidden="true">→</span></button></form></div></section>;
+  const domainMeta = blueprint.target.diagnosticDomains;
+  return (
+    <section className="view is-visible">
+      <div className="page-intro">
+        <div><div className="eyebrow"><span className="eyebrow-line" /> baseline / {blueprint.target.short} / {allQuestions.length} questions</div><h1>Find the gap.</h1><p>This is a signal, not a readiness claim. Use wrong answers to choose the next field test for {blueprint.title}.</p></div>
+        <div className="page-intro-aside"><span className="big-annotation">P1 → P4</span><span>ingestion<br />stores<br />operations<br />security</span></div>
+      </div>
+      <div className="diagnostic-layout">
+        <aside className="panel diagnostic-side">
+          <div className="panel-kicker"><span className="kicker-number">NOTE</span> baseline posture</div>
+          <h2>{result ? `${result.score} / ${allQuestions.length}` : "Not taken"}</h2>
+          <p>{result ? `${result.percentage}% correct. Read the practice-dimension breakdown before choosing a week.` : `Complete all ${allQuestions.length} questions, then use the score as a starting point—not a verdict.`}</p>
+          <p className="diagnostic-blueprint-note">{blueprint.target.diagnosticNote}</p>
+          {result && <div className="diagnostic-history">{Object.entries(result.byDomain).map(([key, value]) => { const meta = domainMeta[key as keyof typeof domainMeta]; return <div className="domain-score" key={key}><div><span>{meta.short}</span><strong>{meta.label}</strong></div><b>{value.percentage}%</b></div>; })}</div>}
+        </aside>
+        <form className="panel diagnostic-form" onSubmit={onSubmit}>
+          <div className="diagnostic-toolbar">
+            <label className="filter-label">show<select value={domain} onChange={(event) => onDomain(event.target.value)}><option value="all">all practice dimensions</option>{Object.entries(domainMeta).map(([key, value]) => <option key={key} value={key}>{value.short} · {value.label}</option>)}</select></label>
+            <button className="text-button" type="button" onClick={() => onUpdate((previous) => ({ ...previous, diagnostic: { ...previous.diagnostic, answers: Array(allQuestions.length).fill(""), result: null } }), "Diagnostic cleared")}>clear baseline</button>
+          </div>
+          {questions.map(({ question, baselineIndex }) => {
+            const selectId = `diagnostic-answer-${baselineIndex + 1}`;
+            return <div className="question-item" key={question.id}><div className="question-number">Q{String(baselineIndex + 1).padStart(2, "0")} <span>{domainMeta[question.domain].short}</span></div><label className="question-prompt" htmlFor={selectId}>{question.prompt}</label><select id={selectId} aria-label={`Answer question ${baselineIndex + 1}`} value={state.diagnostic.answers[baselineIndex] || ""} onChange={(event) => onUpdate((previous) => { const answers = [...previous.diagnostic.answers]; answers[baselineIndex] = event.target.value; return { ...previous, diagnostic: { ...previous.diagnostic, answers } }; })}><option value="">Choose one</option>{Object.entries(question.options).map(([key, option]) => <option key={key} value={key}>{key} — {option}</option>)}</select></div>;
+          })}
+          <div className="diagnostic-bottom"><label className="field-label">Time taken<input value={state.diagnostic.time} onChange={(event) => onUpdate((previous) => ({ ...previous, diagnostic: { ...previous.diagnostic, time: event.target.value } }))} placeholder="e.g. 24 minutes" /></label><label className="field-label">Confidence<select value={state.diagnostic.confidence} onChange={(event) => onUpdate((previous) => ({ ...previous, diagnostic: { ...previous.diagnostic, confidence: event.target.value } }))}><option value="">Select one</option><option>low</option><option>medium</option><option>high</option></select></label><label className="field-label diagnostic-wide">Uncertain questions<textarea value={state.diagnostic.uncertain} onChange={(event) => onUpdate((previous) => ({ ...previous, diagnostic: { ...previous.diagnostic, uncertain: event.target.value } }))} placeholder="Question numbers and why they felt uncertain" /></label></div>
+          <button className="button button-primary" type="submit">Score baseline <span aria-hidden="true">→</span></button>
+        </form>
+      </div>
+    </section>
+  );
 }
 
 function CheckinView({ weeks, state, selectedWeek, onWeek, onDelete, onSubmit }: { weeks: PathBlueprint["weeks"]; state: DashboardState; selectedWeek: number; onWeek: (week: number) => void; onDelete: (id: string) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void }) {
@@ -872,7 +941,15 @@ interface SimulationsViewProps {
 
 function SimulationsView({ blueprint, state, onUpdate }: SimulationsViewProps) {
   const [selectedSimulation, setSelectedSimulation] = useState(0);
+  const [timerStartedAt, setTimerStartedAt] = useState<number | null>(null);
+  const [timerNow, setTimerNow] = useState(() => Date.now());
   const simulation = blueprint.simulations[selectedSimulation] || blueprint.simulations[0];
+
+  useEffect(() => {
+    if (timerStartedAt === null) return;
+    const timer = window.setInterval(() => setTimerNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [timerStartedAt]);
 
   if (!simulation) {
     return <section className="view is-visible"><div className="page-intro"><div><div className="eyebrow"><span className="eyebrow-line" /> simulations / unavailable</div><h1>No simulations yet.</h1><p>This route does not have an embedded exam set available.</p></div></div></section>;
@@ -881,10 +958,13 @@ function SimulationsView({ blueprint, state, onUpdate }: SimulationsViewProps) {
   const attempt = state.simulations[simulation.key];
   const answers = attempt?.answers || {};
   const answeredCount = simulation.questions.filter((question) => Boolean(answers[question.id])).length;
+  const elapsedSeconds = timerStartedAt === null ? 0 : Math.max(0, Math.floor((timerNow - timerStartedAt) / 1000));
+  const remainingSeconds = Math.max(0, simulation.durationMinutes * 60 - elapsedSeconds);
+  const timerLabel = `${String(Math.floor(remainingSeconds / 60)).padStart(2, "0")}:${String(remainingSeconds % 60).padStart(2, "0")}`;
 
   function setAnswer(questionId: string, answer: string) {
     onUpdate((previous) => {
-      const previousAttempt = previous.simulations[simulation.key] || { answers: {}, result: null };
+      const previousAttempt = previous.simulations[simulation.key] || { answers: {}, result: null, history: [] };
       return {
         ...previous,
         simulations: {
@@ -912,11 +992,12 @@ function SimulationsView({ blueprint, state, onUpdate }: SimulationsViewProps) {
       percentage: percent(score, simulation.questions.length),
       submittedAt: new Date().toISOString(),
     };
+    setTimerStartedAt(null);
     onUpdate((previous) => {
-      const previousAttempt = previous.simulations[simulation.key] || { answers: {}, result: null };
+      const previousAttempt = previous.simulations[simulation.key] || { answers: {}, result: null, history: [] };
       return {
         ...previous,
-        simulations: { ...previous.simulations, [simulation.key]: { ...previousAttempt, result } },
+        simulations: { ...previous.simulations, [simulation.key]: { ...previousAttempt, result, history: [...previousAttempt.history, result] } },
       };
     }, `${simulation.title} scored: ${score}/${simulation.questions.length}`);
   }
@@ -935,9 +1016,9 @@ function SimulationsView({ blueprint, state, onUpdate }: SimulationsViewProps) {
         <div>
           <div className="eyebrow"><span className="eyebrow-line" /> simulations / {blueprint.source.short} → {blueprint.target.short}</div>
           <h1>Practice the decision.</h1>
-          <p>Four short, route-specific exam sets for {blueprint.title}. Choose a set, commit to the answer, then use the rationale to decide what to revisit.</p>
+          <p>Four compact, route-specific exam-practice sets for {blueprint.title}. They build decision fluency; they are not full-length replicas of the official exam.</p>
         </div>
-        <div className="page-intro-aside"><span className="big-annotation">4 SETS</span><span>{blueprint.target.credential}<br />12 minutes each<br />saved per route</span></div>
+        <div className="page-intro-aside"><span className="big-annotation">4 SETS</span><span>{blueprint.target.credential}<br />suggested 12 minutes<br />attempt history saved</span></div>
       </div>
 
       <div className="simulations-layout">
@@ -948,7 +1029,7 @@ function SimulationsView({ blueprint, state, onUpdate }: SimulationsViewProps) {
               const itemAttempt = state.simulations[item.key];
               const itemAnswered = item.questions.filter((question) => Boolean(itemAttempt?.answers?.[question.id])).length;
               return (
-                <button className={`simulation-launcher-item${selectedSimulation === index ? " is-active" : ""}`} type="button" key={item.key} aria-pressed={selectedSimulation === index} onClick={() => setSelectedSimulation(index)}>
+                <button className={`simulation-launcher-item${selectedSimulation === index ? " is-active" : ""}`} type="button" key={item.key} aria-pressed={selectedSimulation === index} onClick={() => { setSelectedSimulation(index); setTimerStartedAt(null); setTimerNow(Date.now()); }}>
                   <span className="simulation-launcher-number">SIM {String(item.number).padStart(2, "0")}</span>
                   <span className="simulation-launcher-copy"><strong>{item.title}</strong><small>{item.focus}</small></span>
                   <span className={`simulation-launcher-score${itemAttempt?.result ? " is-scored" : ""}`}>{itemAttempt?.result ? `${itemAttempt.result.score}/${itemAttempt.result.total}` : `${itemAnswered}/${item.questions.length}`}</span>
@@ -961,8 +1042,8 @@ function SimulationsView({ blueprint, state, onUpdate }: SimulationsViewProps) {
 
         <form className="panel simulation-player" onSubmit={submitSimulation}>
           <div className="simulation-player-heading">
-            <div><div className="panel-kicker"><span className="kicker-number">SIM {String(simulation.number).padStart(2, "0")}</span> {simulation.durationMinutes} min set</div><h2>{simulation.title}</h2><p>{simulation.focus}</p></div>
-            <button className="text-button simulation-reset" type="button" onClick={resetSimulation}>reset set</button>
+            <div><div className="panel-kicker"><span className="kicker-number">SIM {String(simulation.number).padStart(2, "0")}</span> suggested {simulation.durationMinutes} min</div><h2>{simulation.title}</h2><p>{simulation.focus}</p></div>
+            <div className="simulation-heading-actions"><button className={`text-button simulation-timer${remainingSeconds === 0 ? " is-expired" : ""}`} type="button" onClick={() => { setTimerNow(Date.now()); setTimerStartedAt(timerStartedAt === null ? Date.now() : null); }}>{timerStartedAt === null ? `start timer · ${timerLabel}` : `stop timer · ${timerLabel}`}</button><button className="text-button simulation-reset" type="button" onClick={resetSimulation}>reset set</button></div>
           </div>
           <div className="simulation-questions">
             {simulation.questions.map((question, questionIndex) => (
@@ -980,7 +1061,7 @@ function SimulationsView({ blueprint, state, onUpdate }: SimulationsViewProps) {
             ))}
           </div>
           <div className="simulation-player-footer"><span>{answeredCount} / {simulation.questions.length} answered{attempt?.result ? ` · last score ${attempt.result.score}/${attempt.result.total}` : ""}</span><button className="button button-primary" type="submit">{attempt?.result ? "Rescore set" : "Score set"} <span aria-hidden="true">→</span></button></div>
-          {attempt?.result && <div className="simulation-result" role="status"><div className="simulation-result-score"><span>last result</span><strong>{attempt.result.score}/{attempt.result.total}</strong><small>{attempt.result.percentage}% · {formatDate(attempt.result.submittedAt)}</small></div><div className="simulation-review-list">{simulation.questions.map((question, questionIndex) => { const correct = answers[question.id] === question.answer; return <article className={`simulation-review ${correct ? "is-correct" : "is-missed"}`} key={question.id}><span>Q{String(questionIndex + 1).padStart(2, "0")}</span><div><strong>{correct ? "Correct" : `Revisit · answer ${question.answer}`}</strong><p>{question.rationale}</p></div></article>; })}</div></div>}
+          {attempt?.result && <div className="simulation-result" role="status"><div className="simulation-result-score"><span>last result</span><strong>{attempt.result.score}/{attempt.result.total}</strong><small>{attempt.result.percentage}% · {formatDate(attempt.result.submittedAt)}</small>{attempt.history.length > 1 && <ol className="simulation-history" aria-label="Recent attempt history">{attempt.history.slice(-4).reverse().map((item) => <li key={item.submittedAt}><span>{formatDate(item.submittedAt)}</span><b>{item.score}/{item.total}</b></li>)}</ol>}</div><div className="simulation-review-list">{simulation.questions.map((question, questionIndex) => { const correct = answers[question.id] === question.answer; return <article className={`simulation-review ${correct ? "is-correct" : "is-missed"}`} key={question.id}><span>Q{String(questionIndex + 1).padStart(2, "0")}</span><div><strong>{correct ? "Correct" : `Revisit · answer ${question.answer}`}</strong><p>{question.rationale}</p></div></article>; })}</div></div>}
         </form>
       </div>
     </section>
@@ -989,7 +1070,18 @@ function SimulationsView({ blueprint, state, onUpdate }: SimulationsViewProps) {
 
 function LibraryView({ blueprint }: { blueprint: PathBlueprint }) {
   const { source, target } = blueprint;
-  return <section className="view is-visible"><div className="page-intro"><div><div className="eyebrow"><span className="eyebrow-line" /> reference desk / {source.short} → {target.short}</div><h1>The desk.</h1><p>Use the prepared material as a starting point. The evidence you create is the actual curriculum.</p></div><div className="page-intro-aside"><span className="big-annotation">FIELD KIT</span><span>offline shell<br />optional cloud sync</span></div></div><div className="library-grid"><section className="panel library-primary"><div className="panel-kicker"><span className="kicker-number">CORE</span> start with these</div><ResourceList resources={[{ number: "01", title: "Start Here", description: `Current status, first 30 minutes, and the ${source.short} → ${target.short} map.`, href: "/guides/AWS-DATA-ENGINEER-START-HERE.md", type: "local" }, { number: "02", title: "Completion audit", description: "Prepared material versus learner evidence still needed.", href: "/guides/AWS-DATA-ENGINEER-COMPLETION-AUDIT.md", type: "local" }, { number: "03", title: "Study plan", description: `Full ${target.short} sequence, capstone, modeling translation, and gates.`, href: "/guides/aws-data-engineer-study-plan.md", type: "local" }, { number: "04", title: `${target.short} simulations`, description: `Four embedded readiness sets for ${blueprint.title}.`, href: trackHref(blueprint.key, "simulations"), type: target.short }]} /></section><section className="panel library-secondary"><div className="panel-kicker"><span className="kicker-number">TARGET</span> official doors</div><ResourceList resources={[{ number: "A", title: target.credential, description: `Current ${target.short} scope, domains, response types, and revisions.`, href: target.officialUrl, type: target.short }, { number: "B", title: "Certification preparation", description: `Use the platform’s current preparation index and official options.`, href: target.preparationUrl, type: target.short }, { number: "C", title: "Simulation launcher", description: "Open the four embedded route simulations.", href: trackHref(blueprint.key, "simulations"), type: "route" }]} /></section><section className="panel dataform-panel"><div className="panel-kicker"><span className="kicker-number">NOTE</span> source → target</div><h2>Keep the modeling muscle.</h2><p>Carry the modeling, orchestration, and quality habits from {source.short} into {target.short}; keep the boundary explicit rather than memorizing product names.</p><div className="dataform-pair"><span>{source.services.semantic}</span><span className="pair-arrow">→</span><strong>{target.services.semantic}</strong></div><div className="dataform-pair"><span>{source.services.orchestration}</span><span className="pair-arrow">→</span><strong>{target.services.orchestration}</strong></div></section><section className="panel rules-panel"><div className="panel-kicker"><span className="kicker-number">RULES</span> keep the sandbox healthy</div><ul className="rules-list"><li><span>01</span><p>Never put credentials, MFA codes, or secret values into StackBridge.</p></li><li><span>02</span><p>Do not mark a week verified until the artifact, evidence, reflection, and teardown exist.</p></li><li><span>03</span><p>Delete temporary target resources deliberately; budgets notify, but they do not block spend.</p></li></ul></section></div></section>;
+  const coreResources = blueprint.key === PATH_KEY ? [
+    { number: "01", title: "Start Here", description: `Current status, first 30 minutes, and the ${source.short} → ${target.short} map.`, href: "/guides/AWS-DATA-ENGINEER-START-HERE.md", type: "embedded" },
+    { number: "02", title: "Completion audit", description: "Prepared material versus learner evidence still needed.", href: "/guides/AWS-DATA-ENGINEER-COMPLETION-AUDIT.md", type: "embedded" },
+    { number: "03", title: "Study plan", description: `Full ${target.short} sequence, capstone, modeling translation, and gates.`, href: "/guides/aws-data-engineer-study-plan.md", type: "embedded" },
+    { number: "04", title: `${target.short} simulations`, description: `Four embedded compact exam-practice sets for ${blueprint.title}.`, href: trackHref(blueprint.key, "simulations"), type: target.short },
+  ] : [
+    { number: "01", title: "Orientation + baseline", description: `Open the route-specific safety, credential, and baseline field guide.`, href: blueprint.weeks[0].guide, type: "route guide" },
+    { number: "02", title: "Complete field-guide sequence", description: `All ${blueprint.weeks.length} embedded guides are attached to the roadmap milestones.`, href: trackHref(blueprint.key, "roadmap"), type: "roadmap" },
+    { number: "03", title: "Capstone + remediation", description: `Integrate the ${target.short} platform story and close the evidence gaps.`, href: blueprint.weeks[10].guide, type: "route guide" },
+    { number: "04", title: `${target.short} simulations`, description: `Four embedded compact exam-practice sets for ${blueprint.title}.`, href: trackHref(blueprint.key, "simulations"), type: target.short },
+  ];
+  return <section className="view is-visible"><div className="page-intro"><div><div className="eyebrow"><span className="eyebrow-line" /> reference desk / {source.short} → {target.short}</div><h1>The desk.</h1><p>Use the prepared material as a starting point. The evidence you create is the actual curriculum.</p></div><div className="page-intro-aside"><span className="big-annotation">FIELD KIT</span><span>embedded guides<br />optional cloud sync</span></div></div><div className="library-grid"><section className="panel library-primary"><div className="panel-kicker"><span className="kicker-number">CORE</span> start with these</div><ResourceList resources={coreResources} /></section><section className="panel library-secondary"><div className="panel-kicker"><span className="kicker-number">TARGET</span> official doors</div><ResourceList resources={[{ number: "A", title: target.credential, description: `Current ${target.short} scope, domains, response types, and revisions.`, href: target.officialUrl, type: target.short }, { number: "B", title: "Certification preparation", description: "Use the platform’s current preparation index and official options.", href: target.preparationUrl, type: target.short }, { number: "C", title: "Simulation launcher", description: "Open the four embedded route simulations.", href: trackHref(blueprint.key, "simulations"), type: "route" }]} /></section><section className="panel dataform-panel"><div className="panel-kicker"><span className="kicker-number">NOTE</span> source → target</div><h2>Keep the modeling muscle.</h2><p>Carry the modeling, orchestration, and quality habits from {source.short} into {target.short}; keep the boundary explicit rather than memorizing product names.</p><div className="dataform-pair"><span>{source.services.semantic}</span><span className="pair-arrow">→</span><strong>{target.services.semantic}</strong></div><div className="dataform-pair"><span>{source.services.orchestration}</span><span className="pair-arrow">→</span><strong>{target.services.orchestration}</strong></div></section><section className="panel rules-panel"><div className="panel-kicker"><span className="kicker-number">RULES</span> keep the sandbox healthy</div><ul className="rules-list"><li><span>01</span><p>Never put credentials, MFA codes, or secret values into StackBridge.</p></li><li><span>02</span><p>Do not mark a week verified until the artifact, evidence, reflection, and teardown exist.</p></li><li><span>03</span><p>Delete temporary target resources deliberately; budgets notify, but they do not block spend.</p></li></ul></section></div></section>;
 }
 
 function ResourceList({ resources }: { resources: Array<{ number: string; title: string; description: string; href: string; type: string }> }) {

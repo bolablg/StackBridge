@@ -24,6 +24,7 @@ In the `bolablg-projects/stackbridge` Vercel project, open **Settings → Enviro
 Set these variables for **Preview** deployments:
 
 - `STACKBRIDGE_MODE=hosted`
+- `STACKBRIDGE_DATA_ENV=preview`
 - `DATABASE_URL` for the intended preview database
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` from the Clerk development instance (`pk_test_…`)
 - `CLERK_SECRET_KEY` from the same Clerk development instance (`sk_test_…`)
@@ -36,6 +37,7 @@ Set these variables for **Preview** deployments:
 Set these variables for **Production** deployments:
 
 - `STACKBRIDGE_MODE=hosted`
+- `STACKBRIDGE_DATA_ENV=production`
 - `DATABASE_URL` for the production database
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` from the Clerk production instance (`pk_live_…`)
 - `CLERK_SECRET_KEY` from the same Clerk production instance (`sk_live_…`)
@@ -43,7 +45,7 @@ Set these variables for **Production** deployments:
 - `CLERK_AUTHORIZED_PARTIES` containing `https://stackbridge.bolablg.com` and only other explicitly approved production origins
 - Any optional `CLERK_JWT_KEY`, `CLERK_FRONTEND_API_URL`, or Resend variables needed in production
 
-The publishable key is designed to be available to the browser. The secret key, JWT key, database URL, and email-delivery key are server-side secrets. Do not copy them into an issue, pull request, README, screenshot, or shell transcript.
+The publishable key is designed to be available to the browser. The secret key, JWT key, database URL, and email-delivery key are server-side secrets. Do not copy them into an issue, pull request, README, screenshot, or shell transcript. `STACKBRIDGE_DATA_ENV` is not a secret; it is a stable namespace used in the email-keyed account and access upserts so Preview and Production remain isolated even if they share a database connection.
 
 ## Branch and deployment flow
 
@@ -59,6 +61,7 @@ Do not manually promote a preview to production with the wrong target variables.
 Verify the configuration without printing secret values:
 
 - In Vercel, confirm `STACKBRIDGE_MODE` is `hosted` for both Preview and Production.
+- Confirm `STACKBRIDGE_DATA_ENV` is `preview` for Preview and `production` for Production.
 - Confirm each target has both Clerk variables and that they are assigned only to the intended target.
 - In the relevant Clerk instance, confirm the publishable-key prefix: `pk_test_` for Preview and `pk_live_` for Production.
 - Test sign-in with a non-production account on a Preview URL, then test the production origin separately.
