@@ -20,7 +20,7 @@ Version one has one live route: a Google Cloud Professional Data Engineer moving
 - A 16-question baseline diagnostic with domain scoring.
 - Weekly accountability check-ins and recent-history tracking.
 - GCP → AWS service translation, including Dataform → dbt + Redshift.
-- The existing Markdown study guides and official AWS resources.
+- The existing Markdown study guides and official AWS resources, rendered as embedded guide pages inside the app.
 - Browser-local persistence for immediate use, with per-user hosted sync when Clerk and Neon are configured.
 - Installable PWA shell with offline app loading, network awareness, and a dim theme.
 - Multi-user, multi-path storage through Clerk and Neon Postgres.
@@ -68,6 +68,7 @@ clerk doctor
 ## Repository layout
 
 - `app/` and `lib/` — the current Next.js application and its server services.
+- `guides/` — open-source Markdown source for the embedded field guides; the app renders these through `/guides/<slug>` rather than exposing raw `.md` files.
 - `styles/` — the shared dashboard stylesheet used by the current and legacy interfaces.
 - `public/` — assets served by the PWA; image assets live under `public/images/`, while `manifest.json` and `sw.js` stay at the public root for stable web-app URLs.
 - `local/` — optional local-development launchers.
