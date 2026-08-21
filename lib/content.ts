@@ -240,6 +240,29 @@ export const DOMAIN_META = {
   security: { label: "Data Security & Governance", short: "D4", weight: "18%" },
 } as const;
 
+export type DiagnosticDomainKey = keyof typeof DOMAIN_META;
+export type DiagnosticDomainMeta = Record<DiagnosticDomainKey, {
+  label: string;
+  short: string;
+  weight: string;
+}>;
+
+export type SafetyProfile = {
+  locationLabel: string;
+  locationPlaceholder: string;
+  accountLabel: string;
+  accountOptions: string[];
+  expiryLabel: string;
+  checks: [keyof DashboardSetupChecks, string][];
+};
+
+export type DashboardSetupChecks = {
+  rootMfa: boolean;
+  nonRoot: boolean;
+  budget: boolean;
+  noOrg: boolean;
+};
+
 export const DEFAULT_PATH_KEY = "gcp-to-aws-data-engineer";
 
 export type PlatformKey = "gcp" | "aws" | "azure" | "databricks" | "snowflake";
@@ -251,6 +274,9 @@ export type PlatformProfile = {
   credential: string;
   officialUrl: string;
   preparationUrl: string;
+  diagnosticDomains: DiagnosticDomainMeta;
+  diagnosticNote: string;
+  safety: SafetyProfile;
   services: {
     lake: string;
     warehouse: string;
@@ -299,6 +325,21 @@ export const PLATFORM_PROFILES: Record<PlatformKey, PlatformProfile> = {
     credential: "Professional Data Engineer",
     officialUrl: "https://cloud.google.com/learn/certification/data-engineer",
     preparationUrl: "https://cloud.google.com/learn/certification/data-engineer",
+    diagnosticDomains: {
+      ingestion: { label: "Ingest & process data", short: "P1", weight: "practice" },
+      stores: { label: "Store, prepare & use data", short: "P2", weight: "practice" },
+      operations: { label: "Maintain & automate workloads", short: "P3", weight: "practice" },
+      security: { label: "Secure data processing", short: "P4", weight: "practice" },
+    },
+    diagnosticNote: "Practice dimensions aligned to the current Professional Data Engineer abilities; they are not presented as official exam weights.",
+    safety: {
+      locationLabel: "Default region",
+      locationPlaceholder: "us-central1",
+      accountLabel: "Project boundary",
+      accountOptions: ["Personal sandbox project", "Free-trial project", "Organization sandbox"],
+      expiryLabel: "Credit / budget review",
+      checks: [["rootMfa", "Google account MFA enabled"], ["nonRoot", "Least-privilege admin and service account tested"], ["budget", "Project budget alert exists"], ["noOrg", "Project ownership and organization are understood"]],
+    },
     services: {
       lake: "Cloud Storage",
       warehouse: "BigQuery",
@@ -318,6 +359,16 @@ export const PLATFORM_PROFILES: Record<PlatformKey, PlatformProfile> = {
     credential: "AWS Certified Data Engineer — Associate (DEA-C01)",
     officialUrl: "https://aws.amazon.com/certification/certified-data-engineer-associate/",
     preparationUrl: "https://aws.amazon.com/certification/certification-prep/",
+    diagnosticDomains: DOMAIN_META,
+    diagnosticNote: "Domains and weights follow the current AWS DEA-C01 exam guide.",
+    safety: {
+      locationLabel: "Default Region",
+      locationPlaceholder: "us-east-1",
+      accountLabel: "Account plan",
+      accountOptions: ["Free Tier", "Paid / budgeted", "Sandbox / organization"],
+      expiryLabel: "Credit expiry",
+      checks: [["rootMfa", "Root MFA enabled"], ["nonRoot", "Non-root admin works"], ["budget", "Budget alert exists"], ["noOrg", "No unexpected organization"]],
+    },
     services: {
       lake: "Amazon S3",
       warehouse: "Athena / Redshift",
@@ -337,6 +388,21 @@ export const PLATFORM_PROFILES: Record<PlatformKey, PlatformProfile> = {
     credential: "Microsoft Certified: Fabric Data Engineer Associate (DP-700)",
     officialUrl: "https://learn.microsoft.com/en-us/credentials/certifications/fabric-data-engineer-associate/",
     preparationUrl: "https://learn.microsoft.com/en-us/training/courses/dp-700t00",
+    diagnosticDomains: {
+      ingestion: { label: "Ingest & transform data", short: "P1", weight: "30–35%" },
+      stores: { label: "Implement & manage analytics", short: "P2", weight: "30–35%" },
+      operations: { label: "Monitor & optimize", short: "P3", weight: "30–35%" },
+      security: { label: "Security & governance decisions", short: "P4", weight: "embedded" },
+    },
+    diagnosticNote: "The first three dimensions follow the DP-700 study guide; security and governance are tested across those dimensions.",
+    safety: {
+      locationLabel: "Default region",
+      locationPlaceholder: "East US",
+      accountLabel: "Subscription boundary",
+      accountOptions: ["Free account", "Pay-as-you-go / budgeted", "Organization sandbox"],
+      expiryLabel: "Credit / budget review",
+      checks: [["rootMfa", "Microsoft Entra MFA enabled"], ["nonRoot", "Least-privilege RBAC identity tested"], ["budget", "Subscription budget alert exists"], ["noOrg", "Tenant and subscription ownership are understood"]],
+    },
     services: {
       lake: "ADLS Gen2 / OneLake",
       warehouse: "Fabric Lakehouse / Warehouse",
@@ -356,6 +422,21 @@ export const PLATFORM_PROFILES: Record<PlatformKey, PlatformProfile> = {
     credential: "Databricks Certified Data Engineer Associate",
     officialUrl: "https://www.databricks.com/learn/certification/data-engineer-associate",
     preparationUrl: "https://customer-academy.databricks.com/learn/learning-plans/10/data-engineer-learning-plan",
+    diagnosticDomains: {
+      ingestion: { label: "Develop data processing code", short: "P1", weight: "practice" },
+      stores: { label: "Model & optimize the lakehouse", short: "P2", weight: "practice" },
+      operations: { label: "Operate production pipelines", short: "P3", weight: "practice" },
+      security: { label: "Govern, secure & deploy", short: "P4", weight: "practice" },
+    },
+    diagnosticNote: "Practice dimensions derived from the current Databricks data-engineering exam objectives; consult the official guide for the exact version you plan to take.",
+    safety: {
+      locationLabel: "Workspace region",
+      locationPlaceholder: "us-west-2",
+      accountLabel: "Workspace boundary",
+      accountOptions: ["Free Edition", "Personal cloud sandbox", "Organization sandbox"],
+      expiryLabel: "Spend review date",
+      checks: [["rootMfa", "SSO or account MFA enabled"], ["nonRoot", "Least-privilege group or service principal tested"], ["budget", "Compute policy and spend alert exist"], ["noOrg", "Cloud account and workspace ownership are understood"]],
+    },
     services: {
       lake: "Delta Lake / cloud object storage",
       warehouse: "Databricks SQL Warehouse",
@@ -375,6 +456,21 @@ export const PLATFORM_PROFILES: Record<PlatformKey, PlatformProfile> = {
     credential: "Snowflake data engineering track",
     officialUrl: "https://www.snowflake.com/en/certifications/",
     preparationUrl: "https://learn.snowflake.com/en/certifications/",
+    diagnosticDomains: {
+      ingestion: { label: "Load & transform data", short: "P1", weight: "practice" },
+      stores: { label: "Model & serve data", short: "P2", weight: "practice" },
+      operations: { label: "Operate & optimize workloads", short: "P3", weight: "practice" },
+      security: { label: "Secure & govern the platform", short: "P4", weight: "practice" },
+    },
+    diagnosticNote: "Practice dimensions for route planning; use the official Snowflake guide for credential-specific objectives.",
+    safety: {
+      locationLabel: "Account region",
+      locationPlaceholder: "AWS_US_WEST_2",
+      accountLabel: "Account boundary",
+      accountOptions: ["Trial account", "Personal account", "Organization sandbox"],
+      expiryLabel: "Trial / spend review",
+      checks: [["rootMfa", "Account MFA enabled"], ["nonRoot", "Least-privilege role hierarchy tested"], ["budget", "Resource monitor exists"], ["noOrg", "Account and organization ownership are understood"]],
+    },
     services: {
       lake: "Stages / external storage",
       warehouse: "Virtual warehouses",
@@ -483,16 +579,41 @@ const BRIDGE_WEEK_TEMPLATES = [
   },
 ] as const;
 
+const BRIDGE_WEEK_SERVICE_KEYS: Array<keyof PlatformProfile["services"]> = [
+  "governance",
+  "lake",
+  "batch",
+  "warehouse",
+  "semantic",
+  "streaming",
+  "orchestration",
+  "governance",
+  "observability",
+  "orchestration",
+  "warehouse",
+  "governance",
+  "observability",
+];
+
+export function getBridgeWeekServiceKey(weekNumber: number): keyof PlatformProfile["services"] {
+  return BRIDGE_WEEK_SERVICE_KEYS[weekNumber] || "warehouse";
+}
+
 function buildBridgeWeeks(pathKey: string, source: PlatformProfile, target: PlatformProfile): Week[] {
-  return BRIDGE_WEEK_TEMPLATES.map((week, number) => ({
-    number,
-    title: week.title,
-    domain: week.domain,
-    summary: `${week.summary} ${source.short} → ${target.short} focus: ${target.services[number === 1 ? "lake" : number === 2 ? "batch" : number === 3 ? "warehouse" : number === 4 ? "semantic" : number === 5 ? "streaming" : number === 6 ? "orchestration" : number === 7 ? "governance" : number === 8 ? "observability" : number === 9 ? "orchestration" : "warehouse" ]}.`,
-    tags: [...week.tags, target.short],
-    deliverable: week.deliverable,
-    guide: `/data-engineering/${pathKey}/library`,
-  }));
+  return BRIDGE_WEEK_TEMPLATES.map((week, number) => {
+    const serviceKey = getBridgeWeekServiceKey(number);
+    const sourceService = source.services[serviceKey];
+    const targetService = target.services[serviceKey];
+    return {
+      number,
+      title: week.title,
+      domain: week.domain,
+      summary: `${week.summary} Translate the ${sourceService} mental model into ${targetService}.`,
+      tags: [...week.tags, targetService],
+      deliverable: week.deliverable,
+      guide: `/data-engineering/${pathKey}/guides/${number}`,
+    };
+  });
 }
 
 function buildTransfers(source: PlatformProfile, target: PlatformProfile): Transfer[] {

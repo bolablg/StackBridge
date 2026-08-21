@@ -370,7 +370,7 @@
   text-transform: uppercase !important;
 }
 
-.clerk-auth-component-card .cl-form {
+.clerk-auth-form {
   display: flex !important;
   width: 100% !important;
   flex-direction: column !important;
@@ -566,12 +566,7 @@
 .auth-minimal .clerk-auth-card-box,
 .auth-minimal .clerk-auth-component-card,
 .auth-minimal .clerk-auth-main,
-.auth-minimal .clerk-auth-form,
-.auth-minimal .cl-cardBox,
-.auth-minimal .cl-card,
-.auth-minimal .cl-rootBox,
-.auth-minimal .cl-main,
-.auth-minimal .cl-form {
+.auth-minimal .clerk-auth-form {
   background: transparent !important;
   border: 0 !important;
   border-radius: 0 !important;
@@ -579,9 +574,7 @@
 }
 
 .auth-minimal .clerk-auth-card-box,
-.auth-minimal .clerk-auth-component-card,
-.auth-minimal .cl-cardBox,
-.auth-minimal .cl-card {
+.auth-minimal .clerk-auth-component-card {
   padding: 0 !important;
   overflow: visible !important;
 }

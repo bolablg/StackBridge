@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#2d3b3c" />
+    <title>Offline — StackBridge</title>
+    <style>
+      :root { color-scheme: light dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+      body { min-height: 100vh; margin: 0; display: grid; place-items: center; background: #f3f0e8; color: #263536; }
+      main { width: min(88vw, 34rem); padding: 2rem 0; }
+      span { font: 700 .75rem/1.4 ui-monospace, monospace; letter-spacing: .12em; text-transform: uppercase; color: #577065; }
+      h1 { margin: 1rem 0 .75rem; font: 500 clamp(3rem, 12vw, 5rem)/.94 Georgia, serif; letter-spacing: -.06em; }
+      p { max-width: 31rem; color: #566361; line-height: 1.7; }
+      button { min-height: 44px; margin-top: 1rem; padding: .75rem 1rem; border: 0; border-radius: .4rem; background: #2d3b3c; color: #f7f4ec; font: 700 .85rem/1 ui-sans-serif, system-ui, sans-serif; cursor: pointer; }
+      @media (prefers-color-scheme: dark) { body { background: #172223; color: #f3f0e8; } p { color: #bac6c0; } }
+    </style>
+  </head>
+  <body><main><span>StackBridge / offline</span><h1>The bridge is paused.</h1><p>This private workspace needs a connection before it can load. Your last saved browser progress remains on this device.</p><button type="button" onclick="location.reload()">Try again</button></main></body>
+</html>
