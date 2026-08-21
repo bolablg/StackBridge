@@ -94,6 +94,22 @@ Set these environment variables in Vercel for Preview and Production:
 - `STACKBRIDGE_ADMIN_EMAIL` — required; the Clerk email that owns the access queue.
 - `RESEND_API_KEY` and `ACCESS_REQUEST_FROM_EMAIL` — optional; enable email notifications for new access requests.
 
+### Clerk environment boundary
+
+The Vercel deployment target and the Clerk instance must always match. This is a security and data-isolation boundary, not just a naming convention:
+
+| Deployment target | Used for | Clerk keys | Public URL |
+| --- | --- | --- | --- |
+| Vercel **Preview** | `dev-*` pushes, pull requests, and staging validation | Clerk development keys: `pk_test_…` and `sk_test_…` | The generated Vercel preview URL for that build |
+| Vercel **Production** | A reviewed merge to `main` | Clerk production keys: `pk_live_…` and `sk_live_…` | [`stackbridge.bolablg.com`](https://stackbridge.bolablg.com) |
+| Local | Contributor development | No Clerk is required; use `STACKBRIDGE_MODE=local` | `http://localhost:3000` |
+
+`STACKBRIDGE_MODE=hosted` is explicitly configured in the StackBridge Vercel project for both Preview and Production. Keep `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` paired within the same Vercel target; never copy a live key into Preview or a test key into Production. The publishable key may reach the browser, but the secret key must remain server-only and must never be committed.
+
+Set `CLERK_AUTHORIZED_PARTIES` per target using the exact origins that should be allowed for that deployment. Use the development Clerk configuration for preview origins and the production Clerk configuration for `https://stackbridge.bolablg.com`; do not broaden the allow-list with an unnecessary wildcard.
+
+The public BOLABLG.com legal and account center at [`legal.bolablg.com`](https://legal.bolablg.com) is intentionally unauthenticated and has no Clerk SDK, Clerk keys, database credentials, or learner data. Its StackBridge product record links to the production URL only; it does not link visitors to a preview deployment.
+
 The first authenticated request creates or upgrades the application tables and seeds the default `gcp-to-aws-data-engineer` path. [`db/schema.sql`](./db/schema.sql) contains the same DDL if you prefer to apply it manually. Each user’s progress is isolated by `(user_id, path_key)`.
 
 ### Access control
@@ -104,7 +120,7 @@ Email delivery is optional so the free deployment remains usable without another
 
 After deploying:
 
-1. Configure Clerk’s allowed origins and redirect URLs for the Vercel preview and production domains.
+1. Configure the development Clerk instance with the preview origins and the production Clerk instance with `https://stackbridge.bolablg.com` and its production redirect URLs.
 2. Create a learner account and verify that a roadmap change survives a full reload.
 3. Create a second account and verify that its path is independent.
 4. Use the browser’s **Install app** / **Add to Home Screen** action to install the PWA.
