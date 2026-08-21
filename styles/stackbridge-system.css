@@ -757,3 +757,48 @@ body {
     display: none;
   }
 }
+
+/*
+ * Content-card geometry
+ *
+ * These values are exactly half of the previous rendered radii. The scope is
+ * deliberately limited to the work surface so navigation, buttons, pills,
+ * form controls, and authentication UI keep their established geometry.
+ */
+.main-content .progress-card,
+.main-content .metric-row,
+.main-content .panel,
+.main-content .quote-panel,
+.main-content .home-signal-card,
+.main-content .path-library {
+  border-radius: 12px;
+}
+
+.main-content .week-card {
+  border-radius: 10px;
+}
+
+.main-content .translation-card,
+.main-content .path-source {
+  border-radius: 8px;
+}
+
+.main-content .resource-item,
+.main-content .domain-route-card {
+  border-radius: 7px;
+}
+
+.main-content .path-route {
+  border-radius: 3.5px;
+}
+
+@media (max-width: 620px) {
+  .main-content .panel,
+  .main-content .metric-row {
+    border-radius: 10px;
+  }
+
+  .main-content .week-card {
+    border-radius: 9px;
+  }
+}

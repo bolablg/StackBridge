@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import AuthenticatedPageShell from "../../authenticated-page-shell";
 import AdminAccessRequests from "./admin-access-requests";
 import { getAccessDecision, listAccessRequests } from "../../../lib/server/access";
 import { getAppSession } from "../../../lib/server/auth";
@@ -18,5 +19,15 @@ export default async function AccessRequestsPage() {
   if (!access.isAdmin) redirect("/");
 
   const requests = await listAccessRequests(session.sql);
-  return <AdminAccessRequests adminEmail={access.adminEmail} initialRequests={requests} />;
+  return (
+    <AuthenticatedPageShell
+      clerkEnabled
+      contextLabel="access requests"
+      displayName={access.displayName}
+      isAdmin
+      activeAdmin
+    >
+      <AdminAccessRequests adminEmail={access.adminEmail} initialRequests={requests} />
+    </AuthenticatedPageShell>
+  );
 }

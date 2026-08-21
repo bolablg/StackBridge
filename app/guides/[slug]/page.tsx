@@ -10,6 +10,8 @@ import { getAccessDecision } from "../../../lib/server/access";
 import { getAppSession, hostedAuthConfigured } from "../../../lib/server/auth";
 import { isLocalMode } from "../../../lib/server/config";
 import { auth } from "@clerk/nextjs/server";
+import AuthenticatedPageShell from "../../authenticated-page-shell";
+import { DEFAULT_PATH_KEY } from "../../../lib/content";
 
 type GuideAnchorProps = ComponentPropsWithoutRef<"a"> & { children?: ReactNode };
 
@@ -50,7 +52,7 @@ function GuideDocument({ guide }: { guide: Guide }) {
   const markdownBody = guide.content.replace(/^#\s+.+(?:\r?\n){1,2}/, "");
 
   return (
-    <main className="guide-page">
+    <div className="guide-page">
       <div className="guide-page-shell">
         <nav className="guide-toolbar" aria-label="Guide navigation">
           <Link className="guide-toolbar-link" href="/data-engineering/gcp-to-aws/library">← Field library</Link>
@@ -104,7 +106,7 @@ function GuideDocument({ guide }: { guide: Guide }) {
           </article>
         </div>
       </div>
-    </main>
+    </div>
   );
 }
 
@@ -113,6 +115,7 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
   const guide = await getGuide(slug);
   if (!guide) notFound();
 
+  let shellIdentity = { clerkEnabled: false, displayName: "Local learner", isAdmin: false };
   if (!isLocalMode()) {
     if (!hostedAuthConfigured()) return renderDashboard();
 
@@ -124,7 +127,19 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
 
     const access = await getAccessDecision(session.user, session.clerkUserId, session.sql);
     if (access.status !== "allowed") return renderDashboard();
+    shellIdentity = { clerkEnabled: true, displayName: access.displayName, isAdmin: access.isAdmin };
   }
 
-  return <GuideDocument guide={guide} />;
+  return (
+    <AuthenticatedPageShell
+      clerkEnabled={shellIdentity.clerkEnabled}
+      contextLabel="field notes"
+      displayName={shellIdentity.displayName}
+      isAdmin={shellIdentity.isAdmin}
+      pathKey={DEFAULT_PATH_KEY}
+      activeView="library"
+    >
+      <GuideDocument guide={guide} />
+    </AuthenticatedPageShell>
+  );
 }
