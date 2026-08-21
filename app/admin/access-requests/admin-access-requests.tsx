@@ -58,7 +58,7 @@ export default function AdminAccessRequests({ adminEmail, initialRequests }: { a
   }
 
   return (
-    <main className="admin-page">
+    <div className="admin-page">
       <div className="admin-page-header">
         <div>
           <div className="eyebrow"><span className="eyebrow-line" /> admin / access control</div>
@@ -92,6 +92,6 @@ export default function AdminAccessRequests({ adminEmail, initialRequests }: { a
           ))}
         </div>
       </section>
-    </main>
+    </div>
   );
 }
