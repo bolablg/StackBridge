@@ -8,6 +8,7 @@ const config = [
       "node_modules/**",
       "api/**",
       "legacy/**",
+      "legal-auth/**",
     ],
   },
 ];
