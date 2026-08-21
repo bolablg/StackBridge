@@ -18,7 +18,7 @@ export async function GET() {
   try {
     const session = await getAppSession();
     if (!session) return authError();
-    const access = await getAccessDecision(session.user, session.sql);
+    const access = await getAccessDecision(session.user, session.clerkUserId, session.sql);
     if (access.status !== "allowed") return NextResponse.json({ error: "Access approval required." }, { status: 403 });
     await ensureSchema(session.sql);
     const rows = await session.sql`
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
   try {
     const session = await getAppSession();
     if (!session) return authError();
-    const access = await getAccessDecision(session.user, session.sql);
+    const access = await getAccessDecision(session.user, session.clerkUserId, session.sql);
     if (access.status !== "allowed") return NextResponse.json({ error: "Access approval required." }, { status: 403 });
     const body = await request.json() as { pathKey?: string };
     const pathKey = typeof body.pathKey === "string" ? body.pathKey.trim() : "";

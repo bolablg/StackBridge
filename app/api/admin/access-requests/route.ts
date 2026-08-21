@@ -20,7 +20,7 @@ export async function GET() {
   try {
     const session = await getAppSession();
     if (!session) return authError();
-    const access = await getAccessDecision(session.user, session.sql);
+    const access = await getAccessDecision(session.user, session.clerkUserId, session.sql);
     if (!access.isAdmin) return forbiddenError();
     const requests = await listAccessRequests(session.sql);
     return NextResponse.json({ requests }, { headers: { "Cache-Control": "no-store" } });
@@ -34,7 +34,7 @@ export async function PATCH(request: Request) {
   try {
     const session = await getAppSession();
     if (!session) return authError();
-    const access = await getAccessDecision(session.user, session.sql);
+    const access = await getAccessDecision(session.user, session.clerkUserId, session.sql);
     if (!access.isAdmin) return forbiddenError();
 
     const body = await request.json() as { id?: unknown; status?: unknown };

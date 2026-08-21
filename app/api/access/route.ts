@@ -16,7 +16,7 @@ export async function GET() {
   try {
     const session = await getAppSession();
     if (!session) return authError();
-    const access = await getAccessDecision(session.user, session.sql);
+    const access = await getAccessDecision(session.user, session.clerkUserId, session.sql);
     return NextResponse.json(access, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     console.error("StackBridge access GET failed", error);
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     const session = await getAppSession();
     if (!session) return authError();
 
-    const access = await getAccessDecision(session.user, session.sql);
+    const access = await getAccessDecision(session.user, session.clerkUserId, session.sql);
     if (access.status === "allowed") {
       return NextResponse.json({ error: "This account already has access.", status: access.status }, { status: 409 });
     }
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
       ? body.message.trim().slice(0, 1000)
       : "";
 
-    const result = await submitAccessRequest(session.user, message, session.sql);
+    const result = await submitAccessRequest(session.user, session.clerkUserId, message, session.sql);
     return NextResponse.json({
       status: result.request.status,
       requestId: result.request.id,
