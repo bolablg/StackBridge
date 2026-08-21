@@ -21,7 +21,7 @@ export async function GET(request: Request) {
   try {
     const session = await getAppSession();
     if (!session) return authError();
-    const access = await getAccessDecision(session.user, session.sql);
+    const access = await getAccessDecision(session.user, session.clerkUserId, session.sql);
     if (access.status !== "allowed") return NextResponse.json({ error: "Access approval required." }, { status: 403 });
     const pathKey = requestedPath(request);
     const enrollment = await ensureEnrollment(session, pathKey);
@@ -45,7 +45,7 @@ export async function PUT(request: Request) {
   try {
     const session = await getAppSession();
     if (!session) return authError();
-    const access = await getAccessDecision(session.user, session.sql);
+    const access = await getAccessDecision(session.user, session.clerkUserId, session.sql);
     if (access.status !== "allowed") return NextResponse.json({ error: "Access approval required." }, { status: 403 });
     const pathKey = requestedPath(request);
     const enrollment = await ensureEnrollment(session, pathKey);

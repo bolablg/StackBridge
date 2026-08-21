@@ -20,7 +20,7 @@ export async function renderDashboard() {
   const session = await getAppSession();
   if (!session) return <StackBridgeDashboard clerkEnabled />;
 
-  const access = await getAccessDecision(session.user, session.sql);
+  const access = await getAccessDecision(session.user, session.clerkUserId, session.sql);
   if (access.status !== "allowed") {
     return (
       <AccessGate

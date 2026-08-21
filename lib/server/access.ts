@@ -72,7 +72,7 @@ function publicRequest(row: AccessRequestRow): PublicAccessRequest {
   };
 }
 
-export async function getAccessDecision(user: PublicUser, database = getSql()): Promise<AccessDecision> {
+export async function getAccessDecision(user: PublicUser, clerkUserId: string, database = getSql()): Promise<AccessDecision> {
   await ensureSchema(database);
 
   const email = normalizeEmail(user.email);
@@ -85,7 +85,11 @@ export async function getAccessDecision(user: PublicUser, database = getSql()): 
     SELECT clerk_user_id
     FROM access_grants
     WHERE path_key = ${DEFAULT_PATH_KEY}
-      AND (clerk_user_id = ${user.id} OR LOWER(email) = ${email})
+      AND (
+        clerk_user_id = ${clerkUserId}
+        OR clerk_user_id = ${user.id}
+        OR LOWER(email) = ${email}
+      )
     LIMIT 1
   ` as unknown as Array<{ clerk_user_id: string }>;
 
@@ -96,7 +100,12 @@ export async function getAccessDecision(user: PublicUser, database = getSql()): 
   const requests = await database`
     SELECT id, status, created_at
     FROM access_requests
-    WHERE path_key = ${DEFAULT_PATH_KEY} AND clerk_user_id = ${user.id}
+    WHERE path_key = ${DEFAULT_PATH_KEY}
+      AND (
+        clerk_user_id = ${clerkUserId}
+        OR clerk_user_id = ${user.id}
+        OR LOWER(email) = ${email}
+      )
     ORDER BY created_at DESC
     LIMIT 1
   ` as unknown as Array<{ id: string; status: AccessRequestStatus; created_at: string }>;
@@ -170,12 +179,18 @@ async function notifyAdminOfRequest(request: PublicAccessRequest) {
   }
 }
 
-export async function submitAccessRequest(user: PublicUser, message: string, database = getSql()) {
+export async function submitAccessRequest(user: PublicUser, clerkUserId: string, message: string, database = getSql()) {
   await ensureSchema(database);
   const existing = await database`
     SELECT id, path_key, clerk_user_id, email, display_name, message, status, created_at, updated_at, reviewed_at, reviewed_by
     FROM access_requests
-    WHERE path_key = ${DEFAULT_PATH_KEY} AND clerk_user_id = ${user.id} AND status = 'pending'
+    WHERE path_key = ${DEFAULT_PATH_KEY}
+      AND status = 'pending'
+      AND (
+        clerk_user_id = ${clerkUserId}
+        OR clerk_user_id = ${user.id}
+        OR LOWER(email) = ${normalizeEmail(user.email)}
+      )
     LIMIT 1
   ` as unknown as AccessRequestRow[];
 
@@ -189,7 +204,7 @@ export async function submitAccessRequest(user: PublicUser, message: string, dat
       id, path_key, clerk_user_id, email, display_name, message, status
     )
     VALUES (
-      ${id}, ${DEFAULT_PATH_KEY}, ${user.id}, ${normalizeEmail(user.email)}, ${user.displayName}, ${message || null}, 'pending'
+      ${id}, ${DEFAULT_PATH_KEY}, ${clerkUserId}, ${normalizeEmail(user.email)}, ${user.displayName}, ${message || null}, 'pending'
     )
     ON CONFLICT DO NOTHING
     RETURNING id, path_key, clerk_user_id, email, display_name, message, status, created_at, updated_at, reviewed_at, reviewed_by
@@ -198,7 +213,13 @@ export async function submitAccessRequest(user: PublicUser, message: string, dat
   const request = inserted[0] || (await database`
     SELECT id, path_key, clerk_user_id, email, display_name, message, status, created_at, updated_at, reviewed_at, reviewed_by
     FROM access_requests
-    WHERE path_key = ${DEFAULT_PATH_KEY} AND clerk_user_id = ${user.id} AND status = 'pending'
+    WHERE path_key = ${DEFAULT_PATH_KEY}
+      AND status = 'pending'
+      AND (
+        clerk_user_id = ${clerkUserId}
+        OR clerk_user_id = ${user.id}
+        OR LOWER(email) = ${normalizeEmail(user.email)}
+      )
     LIMIT 1
   ` as unknown as AccessRequestRow[])[0];
 
