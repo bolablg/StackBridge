@@ -42,7 +42,7 @@ Keep the Clerk instance aligned with the deployment target:
 
 Never place production Clerk keys in a preview environment, a local checkout, a pull request, or source control. Keep the publishable and secret keys paired within the same Vercel environment, configure `CLERK_AUTHORIZED_PARTIES` with the exact origins for that target, and set `STACKBRIDGE_DATA_ENV` to `preview` or `production` so account/access rows cannot cross the Clerk boundary.
 
-The separate [`legal-auth`](./legal-auth/) project is public and unauthenticated. It does not use these variables or the Clerk SDK; its StackBridge link points to production only.
+The separate [`legal-auth`](https://github.com/bolablg/legal-auth) project is public and unauthenticated. It does not use these variables or the Clerk SDK; its StackBridge link points to production only.
 
 ## Useful commands
 

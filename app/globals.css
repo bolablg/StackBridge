@@ -2,6 +2,8 @@
 @import "../styles/responsive-navigation.css";
 @import "../styles/guide-viewer.css";
 @import "../styles/stackbridge-system.css";
+@import "../styles/navigation-shell.css";
+@import "../styles/exam-simulations.css";
 
 .app-loading {
   min-height: 100vh;

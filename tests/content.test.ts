@@ -18,6 +18,13 @@ test("the live data-engineering catalog contains twelve complete bridges", () =>
 
     const questionIds = blueprint.simulations.flatMap((simulation) => simulation.questions.map((question) => question.id));
     assert.equal(new Set(questionIds).size, 16, `${pathKey} diagnostic IDs must be unique`);
+    for (const question of blueprint.simulations.flatMap((simulation) => simulation.questions)) {
+      const optionKeys = Object.keys(question.options);
+      const answerKeys = question.answer.split(",").map((answer) => answer.trim());
+      assert.equal(new Set(optionKeys).size, optionKeys.length, `${question.id} option keys must be unique`);
+      assert.equal(new Set(answerKeys).size, answerKeys.length, `${question.id} answers must be unique`);
+      assert.ok(answerKeys.every((answer) => optionKeys.includes(answer)), `${question.id} answers must resolve to options`);
+    }
     assert.equal(Object.keys(blueprint.target.diagnosticDomains).length, 4);
     assert.equal(blueprint.target.safety.checks.length, 4);
   }
@@ -43,4 +50,32 @@ test("path resolution accepts the legacy route and rejects unknown routes", () =
   assert.equal(resolvePathKey(DEFAULT_PATH_KEY), DEFAULT_PATH_KEY);
   assert.equal(resolvePathKey("unknown-to-nowhere"), null);
   assert.equal(resolvePathKey(), null);
+});
+
+test("exam simulations are owned by the destination credential", () => {
+  const byTarget = new Map<string, typeof PATH_BLUEPRINTS[string]["simulations"]>();
+
+  for (const pathKey of ACTIVE_PATH_KEYS) {
+    const blueprint = PATH_BLUEPRINTS[pathKey];
+    const existing = byTarget.get(blueprint.target.key);
+    if (!existing) {
+      byTarget.set(blueprint.target.key, blueprint.simulations);
+      continue;
+    }
+
+    assert.deepEqual(blueprint.simulations, existing, `all routes to ${blueprint.target.key} must use the same exam bank`);
+  }
+});
+
+test("each live destination exposes official exam-format context and destination-appropriate response types", () => {
+  for (const pathKey of ACTIVE_PATH_KEYS) {
+    const blueprint = PATH_BLUEPRINTS[pathKey];
+    assert.ok(blueprint.target.exam.version);
+    assert.ok(blueprint.target.exam.duration);
+    assert.ok(blueprint.target.exam.questionCount);
+    assert.ok(blueprint.target.exam.responseTypes);
+    const hasMultipleResponse = blueprint.simulations.flatMap((simulation) => simulation.questions).some((question) => question.answer.includes(","));
+    if (blueprint.target.key === "databricks") assert.equal(hasMultipleResponse, false);
+    else assert.equal(hasMultipleResponse, true);
+  }
 });
