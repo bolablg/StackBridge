@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, CSSProperties, FormEvent, ReactNode } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
   ACTIVE_PATH_COUNT,
@@ -55,7 +56,9 @@ function canonicalPathKey(value?: string) {
 }
 
 function baselineQuestions(blueprint: PathBlueprint) {
-  return blueprint.simulations.flatMap((simulation) => simulation.questions);
+  // Keep the quick diagnostic single-response. Multiple-response items remain
+  // in the exam player, where the interaction and scoring match their format.
+  return blueprint.simulations.flatMap((simulation) => simulation.questions).filter((question) => !question.answer.includes(","));
 }
 
 function trackHref(pathKey: string = PATH_KEY, view: View = "overview") {
@@ -225,8 +228,16 @@ function normalizeState(value: unknown, pathKey: string = PATH_KEY): DashboardSt
     simulations: parsed.simulations && typeof parsed.simulations === "object"
       ? Object.fromEntries(Object.entries(parsed.simulations).map(([key, attempt]) => {
         const normalizedAttempt = attempt && typeof attempt === "object" ? attempt as Partial<SimulationAttempt> : {};
-        return [key, {
-          answers: normalizedAttempt.answers && typeof normalizedAttempt.answers === "object" ? normalizedAttempt.answers : {},
+        const legacyMatch = key.match(/-simulation-(\d+)$/);
+        const destinationKey = legacyMatch ? `data-engineer-${blueprint.target.key}-simulation-${legacyMatch[1]}` : key;
+        const normalizedAnswers = normalizedAttempt.answers && typeof normalizedAttempt.answers === "object"
+          ? Object.fromEntries(Object.entries(normalizedAttempt.answers).map(([questionId, answer]) => {
+            const questionMatch = questionId.match(/-simulation-(\d+)-q(\d+)$/);
+            return [questionMatch ? `${blueprint.target.key}-simulation-${questionMatch[1]}-q${questionMatch[2]}` : questionId, answer];
+          }))
+          : {};
+        return [destinationKey, {
+          answers: normalizedAnswers,
           result: normalizedAttempt.result || null,
           history: Array.isArray(normalizedAttempt.history) ? normalizedAttempt.history : normalizedAttempt.result ? [normalizedAttempt.result] : [],
         } satisfies SimulationAttempt];
@@ -267,6 +278,23 @@ function percent(value: number, total: number) {
 
 function TextButton({ children, onClick, danger = false }: { children: ReactNode; onClick?: () => void; danger?: boolean }) {
   return <button className={`text-button${danger ? " text-button-danger" : ""}`} type="button" onClick={onClick}>{children}</button>;
+}
+
+type NavigationIconName = "home" | "paths" | "roadmap" | "diagnostic" | "checkin" | "library" | "exam" | "sun" | "moon";
+
+function NavigationIcon({ name }: { name: NavigationIconName }) {
+  const paths: Record<NavigationIconName, ReactNode> = {
+    home: <><path d="M3 10.5 12 3l9 7.5" /><path d="M5.5 9.5V21h13V9.5M9.5 21v-6h5v6" /></>,
+    paths: <><circle cx="6" cy="6" r="2.25" /><circle cx="18" cy="18" r="2.25" /><path d="M8 7.2c4.8 1.1 6.8 3.1 8.7 8.6" /><path d="m13.5 14.8 3.4 1.2-1.2-3.4" /></>,
+    roadmap: <><path d="M4 19V5" /><path d="M4 7h10l-2.5 3L14 13H4" /><path d="M9 19h11" /></>,
+    diagnostic: <><circle cx="11" cy="11" r="7" /><path d="m16 16 5 5M8.5 11l1.8 1.8 3.6-4" /></>,
+    checkin: <><path d="M5 3.5h10l4 4V21H5z" /><path d="M15 3.5V8h4M8.5 13h7M8.5 17h5" /></>,
+    library: <><path d="M4 5.5h5v14H4zM10.5 5.5h5v14h-5zM17 5.5h3v14h-3z" /></>,
+    exam: <><path d="M6 3.5h12V21H6z" /><path d="M9 8h6M9 12h6M9 16h3" /><path d="m14 16 1.3 1.3L18 14.5" /></>,
+    sun: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></>,
+    moon: <path d="M20.5 15.1A8.7 8.7 0 0 1 8.9 3.5 8.7 8.7 0 1 0 20.5 15.1Z" />,
+  };
+  return <svg aria-hidden="true" className="navigation-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6">{paths[name]}</svg>;
 }
 
 function ClerkHeaderActions({ isAdmin }: { isAdmin: boolean }) {
@@ -651,6 +679,8 @@ function DashboardCore({ auth, isAdmin, pathKey: requestedPathKey }: { auth: Aut
 
   if (authLoading || Boolean(auth.userId && !remoteReady)) return <div className="app-loading">Loading your StackBridge path…</div>;
 
+  const syncLabel = syncStatus === "active" ? "Progress synced" : syncStatus === "saving" ? "Saving progress" : syncStatus === "browser" ? "Saved on this device" : syncStatus === "auth" ? "Sign in to sync" : syncStatus === "setup" ? "Cloud sync unavailable" : syncStatus === "error" ? "Sync needs attention" : "Checking sync";
+
   return (
     <>
       <a className="skip-link" href="#main-content">Skip to main content</a>
@@ -658,10 +688,10 @@ function DashboardCore({ auth, isAdmin, pathKey: requestedPathKey }: { auth: Aut
         <aside ref={sidebarRef} className={`sidebar${mobileMenuOpen ? " is-mobile-open" : ""}`} aria-label="StackBridge navigation">
           <div className="sidebar-header">
             <Link className="brand-lockup" href="/" aria-label="StackBridge overview" onClick={() => setMobileMenuOpen(false)}>
-              <div className="brand-mark" aria-hidden="true">SB</div>
-              <div>
-                <div className="brand-title">STACKBRIDGE</div>
-                <div className="brand-subtitle">career bridge / path library</div>
+              <Image className="brand-mark" src="/images/icon.svg" alt="" width={42} height={42} priority />
+              <div className="brand-copy">
+                <div className="brand-wordmark"><strong>Stack</strong><em>Bridge</em></div>
+                <div className="brand-subtitle">Carry expertise forward</div>
               </div>
             </Link>
             <span className="mobile-current-context">{navigation.scope === "track" ? `${blueprint.source.short} → ${blueprint.target.short}` : navigation.scope === "domain" ? "Data Engineering" : "Path library"}</span>
@@ -674,24 +704,22 @@ function DashboardCore({ auth, isAdmin, pathKey: requestedPathKey }: { auth: Aut
           <div className="sidebar-menu" id="stackbridge-menu">
             {navigation.scope === "track" ? (
               <>
-                <div className="sidebar-stamp" aria-label="Current learning path"><span>{blueprint.source.short}</span><span className="stamp-arrow">→</span><span>{blueprint.target.short}</span></div>
                 <div className="sidebar-context">
-                  <Link className="sidebar-context-back" href="/data-engineering" onClick={() => setMobileMenuOpen(false)}>← Data Engineering</Link>
-                  <span className="sidebar-context-kicker">selected path</span>
-                  <strong>{blueprint.title}</strong>
+                  <Link className="sidebar-context-back" href="/data-engineering" onClick={() => setMobileMenuOpen(false)}>All data engineering paths</Link>
+                  <span className="sidebar-route" aria-label={`From ${blueprint.source.label} to ${blueprint.target.label}`}><b>{blueprint.source.short}</b><i aria-hidden="true">→</i><b>{blueprint.target.short}</b></span>
                   <small>{blueprint.focus}</small>
                 </div>
                 <nav className="primary-nav" aria-label="Selected path">
                   {([
-                    ["overview", "⌂", "Overview", "path brief"],
-                    ["roadmap", "↗", "Roadmap", `weeks 00—${String(weeks.length - 1).padStart(2, "0")}`],
-                    ["diagnostic", "?", "Diagnostic", "baseline signal"],
-                    ["checkin", "＋", "Check-in", "capture the work"],
-                    ["library", "▤", "Library", "guides & links"],
-                    ["simulations", "◈", "Simulations", "four exam sets"],
-                  ] as Array<[View, string, string, string]>).map(([target, icon, title, subtitle]) => (
+                    ["overview", "home", "Overview"],
+                    ["roadmap", "roadmap", "Learning plan"],
+                    ["diagnostic", "diagnostic", "Diagnostic"],
+                    ["checkin", "checkin", "Check-ins"],
+                    ["library", "library", "Resources"],
+                    ["simulations", "exam", "Exam simulations"],
+                  ] as Array<[View, NavigationIconName, string]>).map(([target, icon, title]) => (
                     <Link key={target} className={`nav-item${view === target ? " is-active" : ""}`} href={trackHref(blueprint.key, target)} aria-current={view === target ? "page" : undefined} onClick={() => setMobileMenuOpen(false)}>
-                      <span className="nav-icon" aria-hidden="true">{icon}</span><span><strong>{title}</strong><small>{subtitle}</small></span>
+                      <span className="nav-icon"><NavigationIcon name={icon} /></span><strong>{title}</strong>
                     </Link>
                   ))}
                 </nav>
@@ -699,28 +727,25 @@ function DashboardCore({ auth, isAdmin, pathKey: requestedPathKey }: { auth: Aut
             ) : (
               <nav className="primary-nav primary-nav-library" aria-label="Path library">
                 <Link className={`nav-item${navigation.scope === "home" ? " is-active" : ""}`} href="/" aria-current={navigation.scope === "home" ? "page" : undefined} onClick={() => setMobileMenuOpen(false)}>
-                  <span className="nav-icon" aria-hidden="true">⌂</span><span><strong>Overview</strong><small>career runway</small></span>
+                  <span className="nav-icon"><NavigationIcon name="home" /></span><strong>Overview</strong>
                 </Link>
-                <details className="sidebar-domain" open={navigation.scope === "domain"}>
-                  <summary className="sidebar-domain-summary"><span className="nav-icon" aria-hidden="true">01</span><span><strong>Data Engineering</strong><small>choose a bridge</small></span><span className="sidebar-chevron" aria-hidden="true">↘</span></summary>
-                  <div className="sidebar-domain-links">
-                    <Link className={`sidebar-domain-link${navigation.scope === "domain" ? " is-active" : ""}`} href="/data-engineering" onClick={() => setMobileMenuOpen(false)}>All tracks <span>→</span></Link>
-                    {PATH_CATALOG.find((group) => group.key === DOMAIN_SLUG)?.sources.flatMap((source) => source.routes.filter((route) => route.status === "available" && route.pathKey).map((route) => ({ source, route }))).map(({ source, route }) => (
-                      <Link key={route.key} className="sidebar-domain-link" href={trackHref(route.pathKey || PATH_KEY)} onClick={() => setMobileMenuOpen(false)}>{source.short} → {route.targetMark} <span className="sidebar-live-mark">live</span></Link>
-                    ))}
-                  </div>
-                </details>
-                <div className="sidebar-coming-soon"><span>coming next</span><strong>ML Engineering</strong><strong>Cloud Architecture</strong></div>
+                <Link className={`nav-item${navigation.scope === "domain" ? " is-active" : ""}`} href="/data-engineering" aria-current={navigation.scope === "domain" ? "page" : undefined} onClick={() => setMobileMenuOpen(false)}>
+                  <span className="nav-icon"><NavigationIcon name="paths" /></span><strong>Data engineering</strong>
+                  <span className="nav-count">12</span>
+                </Link>
+                <div className="sidebar-future"><span>Coming later</span><p>Machine learning</p><p>Cloud architecture</p></div>
               </nav>
             )}
             <div className="sidebar-bottom">
-              <div className="local-status"><span className={`status-dot status-dot-${syncStatus}`} /> <span>{syncStatus === "active" ? "auto-save → database" : syncStatus === "saving" ? "writing to database" : syncStatus === "browser" ? "browser storage only" : syncStatus === "auth" ? "sign-in required" : syncStatus === "setup" ? "hosted setup needed" : syncStatus === "error" ? "sync needs attention" : "sync checking"}</span></div>
-              <p>Your progress stays private. StackBridge keeps a browser copy and syncs your enrolled path when hosted auth is available.</p>
-              <div className="sidebar-tools">
-                <TextButton onClick={exportBackup}>Save backup</TextButton>
-                <label className="text-button" htmlFor={`import-file-${importInputKey}`}>Import<input key={importInputKey} id={`import-file-${importInputKey}`} type="file" accept="application/json" hidden onChange={importBackup} /></label>
-                <TextButton danger onClick={resetApp}>Reset</TextButton>
-              </div>
+              <div className="local-status" title={syncLabel}><span className={`status-dot status-dot-${syncStatus}`} /> <span>{syncLabel}</span></div>
+              <details className="sidebar-utilities">
+                <summary>Data &amp; backups <span aria-hidden="true">+</span></summary>
+                <div className="sidebar-tools">
+                  <TextButton onClick={exportBackup}>Download backup</TextButton>
+                  <label className="text-button" htmlFor={`import-file-${importInputKey}`}>Import backup<input key={importInputKey} id={`import-file-${importInputKey}`} type="file" accept="application/json" hidden onChange={importBackup} /></label>
+                  <TextButton danger onClick={resetApp}>Reset this path</TextButton>
+                </div>
+              </details>
             </div>
           </div>
           <button className="mobile-menu-backdrop" type="button" aria-label="Close navigation" tabIndex={-1} onClick={() => setMobileMenuOpen(false)} />
@@ -728,12 +753,11 @@ function DashboardCore({ auth, isAdmin, pathKey: requestedPathKey }: { auth: Aut
 
         <main id="main-content" className="main-content" inert={mobileMenuOpen || undefined}>
           <header className="topbar">
-            <div className="topbar-context"><span className="live-dot" aria-hidden="true" /><span>{navigation.scope === "home" ? "StackBridge / overview" : navigation.scope === "domain" ? "data engineering / track library" : `${blueprint.source.short} → ${blueprint.target.short} / ${VIEW_CONTEXT_LABELS[view]}`}</span></div>
+            <div className="topbar-context"><span>{navigation.scope === "home" ? "Overview" : navigation.scope === "domain" ? "Data engineering" : `${blueprint.source.short} → ${blueprint.target.short}`}</span>{navigation.scope === "track" && <><i aria-hidden="true">/</i><strong>{VIEW_CONTEXT_LABELS[view]}</strong></>}</div>
             <div className="topbar-actions">
-              <span className="network-status"><span className="network-dot" /> {online ? "online" : "offline · local save"}</span>
-              <span className="save-state">{auth.userId ? auth.displayName : "saved locally"}</span>
+              {!online && <span className="network-status is-offline"><span className="network-dot" /> Offline · saving locally</span>}
               {auth.clerkEnabled ? <ClerkHeaderActions isAdmin={isAdmin} /> : <span className="local-mode-label">local mode</span>}
-              <button className="icon-button" type="button" onClick={toggleTheme} aria-label="Switch theme">{state.preferences.theme === "dark" ? "☼" : "◐"}</button>
+              <button className="icon-button" type="button" onClick={toggleTheme} aria-label={`Switch to ${state.preferences.theme === "dark" ? "light" : "dark"} theme`} title={`Switch to ${state.preferences.theme === "dark" ? "light" : "dark"} theme`}><NavigationIcon name={state.preferences.theme === "dark" ? "sun" : "moon"} /></button>
               {navigation.scope === "track" && <button className="button button-small button-dark topbar-checkin" type="button" aria-label="Log a check-in" onClick={() => changeView("checkin")}><span aria-hidden="true">＋</span><span className="topbar-checkin-label">Log check-in</span></button>}
             </div>
           </header>
@@ -962,16 +986,31 @@ function SimulationsView({ blueprint, state, onUpdate }: SimulationsViewProps) {
   const remainingSeconds = Math.max(0, simulation.durationMinutes * 60 - elapsedSeconds);
   const timerLabel = `${String(Math.floor(remainingSeconds / 60)).padStart(2, "0")}:${String(remainingSeconds % 60).padStart(2, "0")}`;
 
-  function setAnswer(questionId: string, answer: string) {
+  function answerKeys(value: string) {
+    return value.split(",").map((key) => key.trim()).filter(Boolean).sort();
+  }
+
+  function answerIsCorrect(selected: string, expected: string) {
+    return answerKeys(selected).join(",") === answerKeys(expected).join(",");
+  }
+
+  function setAnswer(questionId: string, answer: string, expectedAnswer: string) {
     onUpdate((previous) => {
       const previousAttempt = previous.simulations[simulation.key] || { answers: {}, result: null, history: [] };
+      const current = answerKeys(previousAttempt.answers[questionId] || "");
+      const multipleResponse = answerKeys(expectedAnswer).length > 1;
+      const nextAnswer = multipleResponse
+        ? current.includes(answer)
+          ? current.filter((key) => key !== answer).join(",")
+          : current.length < answerKeys(expectedAnswer).length ? [...current, answer].sort().join(",") : current.join(",")
+        : answer;
       return {
         ...previous,
         simulations: {
           ...previous.simulations,
           [simulation.key]: {
             ...previousAttempt,
-            answers: { ...previousAttempt.answers, [questionId]: answer },
+            answers: { ...previousAttempt.answers, [questionId]: nextAnswer },
             result: null,
           },
         },
@@ -985,7 +1024,7 @@ function SimulationsView({ blueprint, state, onUpdate }: SimulationsViewProps) {
       onUpdate((previous) => previous, `Answer all ${simulation.questions.length} questions before scoring this set.`);
       return;
     }
-    const score = simulation.questions.reduce((total, question) => total + (answers[question.id] === question.answer ? 1 : 0), 0);
+    const score = simulation.questions.reduce((total, question) => total + (answerIsCorrect(answers[question.id] || "", question.answer) ? 1 : 0), 0);
     const result: SimulationResult = {
       score,
       total: simulation.questions.length,
@@ -1014,12 +1053,20 @@ function SimulationsView({ blueprint, state, onUpdate }: SimulationsViewProps) {
     <section className="view is-visible simulations-view">
       <div className="page-intro">
         <div>
-          <div className="eyebrow"><span className="eyebrow-line" /> simulations / {blueprint.source.short} → {blueprint.target.short}</div>
+          <div className="eyebrow"><span className="eyebrow-line" /> destination exam / {blueprint.target.short}</div>
           <h1>Practice the decision.</h1>
-          <p>Four compact, route-specific exam-practice sets for {blueprint.title}. They build decision fluency; they are not full-length replicas of the official exam.</p>
+          <p>Four compact sets for {blueprint.target.credential}. The exam bank is owned by the destination credential, so every route to {blueprint.target.short} uses the same questions and answer order.</p>
         </div>
-        <div className="page-intro-aside"><span className="big-annotation">4 SETS</span><span>{blueprint.target.credential}<br />suggested 12 minutes<br />attempt history saved</span></div>
+        <div className="page-intro-aside"><span className="big-annotation">4 SETS</span><span>scenario based<br />timed practice<br />attempt history saved</span></div>
       </div>
+
+      <section className="exam-reality" aria-label={`${blueprint.target.credential} official exam format`}>
+        <div><span>Current target</span><strong>{blueprint.target.exam.version}</strong></div>
+        <div><span>Official duration</span><strong>{blueprint.target.exam.duration}</strong></div>
+        <div><span>Official volume</span><strong>{blueprint.target.exam.questionCount}</strong></div>
+        <div><span>Response format</span><strong>{blueprint.target.exam.responseTypes}</strong></div>
+        <p>{blueprint.target.exam.blueprintSummary}. StackBridge sets are original, condensed practice—not recalled exam questions. <a href={blueprint.target.officialUrl} target="_blank" rel="noreferrer">Review the official guide ↗</a></p>
+      </section>
 
       <div className="simulations-layout">
         <aside className="panel simulation-launcher" aria-label="Exam simulation launcher">
@@ -1037,7 +1084,7 @@ function SimulationsView({ blueprint, state, onUpdate }: SimulationsViewProps) {
               );
             })}
           </div>
-          <p className="simulation-launcher-note">The set stays attached to this route, just like your roadmap and check-ins.</p>
+          <p className="simulation-launcher-note">The exam bank is shared across every route with {blueprint.target.short} as the destination. Your attempt history remains private to this learning path.</p>
         </aside>
 
         <form className="panel simulation-player" onSubmit={submitSimulation}>
@@ -1048,11 +1095,11 @@ function SimulationsView({ blueprint, state, onUpdate }: SimulationsViewProps) {
           <div className="simulation-questions">
             {simulation.questions.map((question, questionIndex) => (
               <fieldset className="simulation-question" key={question.id}>
-                <legend><span>Q{String(questionIndex + 1).padStart(2, "0")}</span>{question.prompt}</legend>
+                <legend><span>Q{String(questionIndex + 1).padStart(2, "0")}</span>{question.prompt}<small>{answerKeys(question.answer).length > 1 ? `Select ${answerKeys(question.answer).length} responses` : "Select one response"}</small></legend>
                 <div className="simulation-options">
                   {Object.entries(question.options).map(([key, option]) => (
-                    <label className={`simulation-option${answers[question.id] === key ? " is-selected" : ""}`} key={`${question.id}-${key}`}>
-                      <input type="radio" name={question.id} value={key} checked={answers[question.id] === key} onChange={() => setAnswer(question.id, key)} />
+                    <label className={`simulation-option${answerKeys(answers[question.id] || "").includes(key) ? " is-selected" : ""}`} key={`${question.id}-${key}`}>
+                      <input type={answerKeys(question.answer).length > 1 ? "checkbox" : "radio"} name={question.id} value={key} checked={answerKeys(answers[question.id] || "").includes(key)} onChange={() => setAnswer(question.id, key, question.answer)} />
                       <span><b>{key}</b>{option}</span>
                     </label>
                   ))}
@@ -1061,7 +1108,7 @@ function SimulationsView({ blueprint, state, onUpdate }: SimulationsViewProps) {
             ))}
           </div>
           <div className="simulation-player-footer"><span>{answeredCount} / {simulation.questions.length} answered{attempt?.result ? ` · last score ${attempt.result.score}/${attempt.result.total}` : ""}</span><button className="button button-primary" type="submit">{attempt?.result ? "Rescore set" : "Score set"} <span aria-hidden="true">→</span></button></div>
-          {attempt?.result && <div className="simulation-result" role="status"><div className="simulation-result-score"><span>last result</span><strong>{attempt.result.score}/{attempt.result.total}</strong><small>{attempt.result.percentage}% · {formatDate(attempt.result.submittedAt)}</small>{attempt.history.length > 1 && <ol className="simulation-history" aria-label="Recent attempt history">{attempt.history.slice(-4).reverse().map((item) => <li key={item.submittedAt}><span>{formatDate(item.submittedAt)}</span><b>{item.score}/{item.total}</b></li>)}</ol>}</div><div className="simulation-review-list">{simulation.questions.map((question, questionIndex) => { const correct = answers[question.id] === question.answer; return <article className={`simulation-review ${correct ? "is-correct" : "is-missed"}`} key={question.id}><span>Q{String(questionIndex + 1).padStart(2, "0")}</span><div><strong>{correct ? "Correct" : `Revisit · answer ${question.answer}`}</strong><p>{question.rationale}</p></div></article>; })}</div></div>}
+          {attempt?.result && <div className="simulation-result" role="status"><div className="simulation-result-score"><span>last result</span><strong>{attempt.result.score}/{attempt.result.total}</strong><small>{attempt.result.percentage}% · {formatDate(attempt.result.submittedAt)}</small>{attempt.history.length > 1 && <ol className="simulation-history" aria-label="Recent attempt history">{attempt.history.slice(-4).reverse().map((item) => <li key={item.submittedAt}><span>{formatDate(item.submittedAt)}</span><b>{item.score}/{item.total}</b></li>)}</ol>}</div><div className="simulation-review-list">{simulation.questions.map((question, questionIndex) => { const correct = answerIsCorrect(answers[question.id] || "", question.answer); return <article className={`simulation-review ${correct ? "is-correct" : "is-missed"}`} key={question.id}><span>Q{String(questionIndex + 1).padStart(2, "0")}</span><div><strong>{correct ? "Correct" : `Revisit · answer ${answerKeys(question.answer).join(" and ")}`}</strong><p>{question.rationale}</p></div></article>; })}</div></div>}
         </form>
       </div>
     </section>
