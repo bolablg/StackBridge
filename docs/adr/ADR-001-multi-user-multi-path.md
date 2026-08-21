@@ -17,14 +17,14 @@ Use Clerk for identity and session management, and Neon Postgres as the applicat
 - `path_enrollments` — which paths a user can access;
 - `path_progress` — one JSON state document per `(user_id, path_key)`.
 
-Use Clerk-managed session tokens validated by `@clerk/backend`. The browser sends a path key to the progress API, while the API authorizes both the Clerk user and the enrollment before reading or writing state.
+Use Clerk-managed session tokens validated by `@clerk/nextjs`. The browser sends a canonical path key to the progress API, while the API authorizes both the Clerk user and the enrollment before reading or writing state. Account identity and application-access records use `(environment_key, normalized_email)` so development and production Clerk instances cannot merge the same email. Progress writes carry a monotonic revision and use a conditional upsert to reject stale saves.
 
 ## Consequences
 
 - Learners can create accounts and their progress is isolated.
 - A user can eventually enroll in multiple certification paths without duplicating the application.
 - New providers become catalog/configuration work rather than a new database shape.
-- The current frontend still renders the GCP → AWS path; a future path selector can load another catalog definition and renderer.
+- The current frontend renders twelve directed data-engineering bridges across GCP, AWS, Azure, and Databricks from one catalog and shared renderer.
 - Clerk provides the account, recovery, and session surface; the application still needs rate limiting and stronger operational monitoring before a large public launch.
 
 ## Revisit when

@@ -17,13 +17,13 @@ Version one has twelve live data-engineering bridges across GCP, AWS, Azure, and
 ## What is included
 
 - A 13-week roadmap with milestone status and field notes.
-- A 16-question, target-specific baseline diagnostic with domain scoring.
-- Four embedded exam simulations for every live bridge, with saved answers, scores, and rationales.
+- A 16-question, target-specific baseline diagnostic with practice-dimension scoring.
+- Four embedded compact exam-practice simulations for every live bridge, with an optional timer, attempt history, scores, and rationales.
 - Weekly accountability check-ins and recent-history tracking.
 - Route-specific service translation, including the GCP → AWS example of Dataform → dbt + Redshift.
-- The existing Markdown study guides and official AWS resources, rendered as embedded guide pages inside the app.
+- Thirteen embedded, route-aware field guides for every live bridge; the reference GCP → AWS route also retains its detailed open-source Markdown guides.
 - Browser-local persistence for immediate use, with per-user hosted sync when Clerk and Neon are configured.
-- Installable PWA shell with offline app loading, network awareness, and a dim theme.
+- Installable PWA shell with a safe offline notice, network awareness, and a dim theme. Authenticated pages remain network-first and are never cached as a shared shell.
 - Multi-user, multi-path storage through Clerk and Neon Postgres.
 - Server-side access control with an admin approval queue for new accounts.
 
@@ -56,6 +56,8 @@ Useful checks:
 
 ```bash
 npm run lint
+npm run typecheck
+npm test
 npm run build
 npm run start
 ```
@@ -86,6 +88,7 @@ The production website is [stackbridge.bolablg.com](https://stackbridge.bolablg.
 Set these environment variables in Vercel for Preview and Production:
 
 - `STACKBRIDGE_MODE=hosted` — enables the authenticated hosted runtime; do not use `local` for a public deployment.
+- `STACKBRIDGE_DATA_ENV` — stable data namespace such as `preview` or `production`; it prevents the same email address from merging across Clerk environments when a database is shared.
 - `DATABASE_URL` — supplied by a Neon Postgres integration.
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` — safe to expose to the browser.
 - `CLERK_SECRET_KEY` — server-only; never commit it or expose it to client code.
@@ -111,11 +114,11 @@ Set `CLERK_AUTHORIZED_PARTIES` per target using the exact origins that should be
 
 The public BOLABLG.com legal and account center at [`legal.bolablg.com`](https://legal.bolablg.com) is intentionally unauthenticated and has no Clerk SDK, Clerk keys, database credentials, or learner data. Its StackBridge product record links to the production URL only; it does not link visitors to a preview deployment.
 
-The first authenticated request creates or upgrades the application tables and seeds all active data-engineering paths, including `gcp-to-aws-data-engineer`. [`db/schema.sql`](./db/schema.sql) contains the same DDL if you prefer to apply it manually. Each user’s progress is isolated by `(user_id, path_key)`.
+The first authenticated request creates or upgrades the application tables and seeds all active data-engineering paths, including `gcp-to-aws-data-engineer`. [`db/schema.sql`](./db/schema.sql) contains the same DDL if you prefer to apply it manually. Application users and access decisions are namespaced by deployment environment and normalized email; each user’s progress is isolated by `(user_id, path_key)` and protected by a monotonic revision during upsert.
 
 ### Access control
 
-The configured admin email is admitted automatically. Every other signed-in account is held at the access gate until approved. The gate can create one pending request per learner and stores the request in Neon. The admin reviews the queue at `/admin/access-requests`; approving a request creates a path-scoped grant. The dashboard page and all progress/path APIs enforce the same decision on the server and return `403` for unapproved accounts.
+The configured admin email is admitted automatically. Every other signed-in account is held at the access gate until approved. The gate can create one pending request per learner and stores the request in Neon. The admin reviews the queue at `/admin/access-requests`; approving a request grants application access within that deployment environment. Path enrollments and progress remain separate per learner and route. The dashboard page and all progress/path APIs enforce the same access decision on the server and return `403` for unapproved accounts.
 
 Email delivery is optional so the free deployment remains usable without another paid service. Without the two Resend variables, requests still appear in the admin queue. To send email notifications, create a free Resend account, add a verified sender address, and set `RESEND_API_KEY` plus `ACCESS_REQUEST_FROM_EMAIL` in Vercel.
 
@@ -126,7 +129,7 @@ After deploying:
 3. Create a second account and verify that its path is independent.
 4. Use the browser’s **Install app** / **Add to Home Screen** action to install the PWA.
 
-The PWA shell can reopen without a network. Database synchronization requires connectivity and a signed-in Clerk session.
+When offline, the PWA shows a minimal connection notice rather than replaying a cached authenticated page. Database synchronization and private route loading require connectivity and a signed-in Clerk session.
 
 ## Open source and contributing
 
@@ -140,7 +143,7 @@ StackBridge is public under the [MIT License](./LICENSE). Start with the [contri
 
 ### CI/CD promotion flow
 
-- Every push to a `dev-*` branch runs the GitHub Actions `quality` check (`npm ci`, lint, and build) and creates a Vercel preview.
+- Every push to a `dev-*` branch runs the GitHub Actions `quality` check (`npm ci`, lint, typecheck, tests, and build) and creates a Vercel preview.
 - After that quality check passes, GitHub Actions automatically opens or reuses a draft pull request from the development branch into `staging`. The automation never merges the pull request; a maintainer reviews it, marks it ready, and merges it when appropriate.
 - A pull request from a `dev-*` branch into `staging` runs the same quality check and receives a Vercel pull-request preview. Merging it updates the staging branch deployment.
 - A pull request from `staging` into `main` must pass both `quality` and the Vercel check. Merging it is the only production release path because `main` is protected.

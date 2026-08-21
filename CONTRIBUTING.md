@@ -40,7 +40,7 @@ Keep the Clerk instance aligned with the deployment target:
 - Vercel Production — use the Clerk production instance (`pk_live_…` and `sk_live_…`) and deploy only through the reviewed `main` path at `https://stackbridge.bolablg.com`.
 - Local development — keep `STACKBRIDGE_MODE=local` unless you are intentionally testing hosted mode with development credentials.
 
-Never place production Clerk keys in a preview environment, a local checkout, a pull request, or source control. Keep the publishable and secret keys paired within the same Vercel environment, and configure `CLERK_AUTHORIZED_PARTIES` with the exact origins for that target.
+Never place production Clerk keys in a preview environment, a local checkout, a pull request, or source control. Keep the publishable and secret keys paired within the same Vercel environment, configure `CLERK_AUTHORIZED_PARTIES` with the exact origins for that target, and set `STACKBRIDGE_DATA_ENV` to `preview` or `production` so account/access rows cannot cross the Clerk boundary.
 
 The separate [`legal-auth`](./legal-auth/) project is public and unauthenticated. It does not use these variables or the Clerk SDK; its StackBridge link points to production only.
 
@@ -49,7 +49,9 @@ The separate [`legal-auth`](./legal-auth/) project is public and unauthenticated
 ```bash
 npm run dev       # Start the development server
 npm run lint      # Run ESLint
-npm run build     # Run the production build and TypeScript checks
+npm run typecheck # Run the TypeScript compiler without emitting files
+npm test          # Run the Node-based content and persistence tests
+npm run build     # Run the production build
 npm run start     # Serve a completed production build
 ```
 
@@ -57,6 +59,8 @@ Before opening a pull request, run at least:
 
 ```bash
 npm run lint
+npm run typecheck
+npm test
 npm run build
 ```
 
@@ -84,7 +88,7 @@ git switch -c dev-your-name
 git push -u origin dev-your-name
 ```
 
-Every push to a `dev-*` branch runs lint and build. Once the quality job passes, GitHub Actions automatically opens or reuses a draft pull request from that branch into `staging`. The workflow does not merge it. Review the diff, mark the draft ready, and merge it when it is suitable for the staging preview.
+Every push to a `dev-*` branch runs lint, typecheck, tests, and build. Once the quality job passes, GitHub Actions automatically opens or reuses a draft pull request from that branch into `staging`. The workflow does not merge it. Review the diff, mark the draft ready, and merge it when it is suitable for the staging preview.
 
 The `staging` branch is the pre-production validation branch. A separate pull request from `staging` to `main` is required for production. Do not push directly to protected branches.
 
@@ -103,6 +107,7 @@ The `staging` branch is the pre-production validation branch. A separate pull re
 - [ ] The change is scoped and documented.
 - [ ] No credentials or machine-specific paths are included.
 - [ ] `npm run lint` passes.
+- [ ] `npm run typecheck` and `npm test` pass.
 - [ ] `npm run build` passes.
 - [ ] Local mode still works without Clerk or Neon credentials.
 - [ ] Hosted-mode behavior remains authenticated and fail-closed.
