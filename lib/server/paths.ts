@@ -1,4 +1,17 @@
 import type { AppSession } from "./auth";
+import { ACTIVE_PATH_KEYS, DEFAULT_PATH_KEY } from "../content";
+
+const LEGACY_PATH_ALIASES: Record<string, string> = {
+  "gcp-to-aws": DEFAULT_PATH_KEY,
+};
+
+export function resolvePathKey(pathKey?: string | null) {
+  const requestedKey = pathKey?.trim();
+  if (!requestedKey) return null;
+
+  const canonicalKey = LEGACY_PATH_ALIASES[requestedKey] || requestedKey;
+  return ACTIVE_PATH_KEYS.includes(canonicalKey) ? canonicalKey : null;
+}
 
 export type PathRow = {
   path_key: string;
@@ -26,10 +39,12 @@ export async function getEnrollment(session: AppSession, pathKey: string) {
 
 export async function ensureEnrollment(session: AppSession, pathKey: string) {
   const existing = await getEnrollment(session, pathKey);
-  if (existing || pathKey !== "gcp-to-aws-data-engineer") return existing;
+  if (existing) return existing;
   await session.sql`
     INSERT INTO path_enrollments (user_id, path_key)
-    VALUES (${session.user.id}, ${pathKey})
+    SELECT ${session.user.id}, path_key
+    FROM learning_paths
+    WHERE path_key = ${pathKey} AND active = TRUE
     ON CONFLICT (user_id, path_key) DO NOTHING
   `;
   return getEnrollment(session, pathKey);
